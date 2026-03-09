@@ -1,69 +1,131 @@
+# Mailbox Design
 
-# Mailbox Design Document
+## Overview
 
-## 1. Overview
-There are two specialized mailbox types. They solve different problems. One is for **blocking threads** (Workers/Clients). The other is for **high-performance loops** (nbio Engine).
+Two mailbox types. They solve different problems.
 
-## 2. Standard Mailbox (`mbox.odin`)
-This mailbox is for regular worker threads.
+- `Mailbox($T)` — for worker threads. Blocks using a condition variable.
+- `Loop_Mailbox($T)` — for nbio event loops. Non-blocking. Wakes the loop with `nbio.wake_up`.
+
+---
+
+## Internal storage
+
+Both types use `core:container/intrusive/list` internally.
+
+The list is intrusive. The node is embedded in the user struct. No heap allocation per message.
+
+User struct contract:
+- Must have a field named `node`.
+- Type of `node` must be `list.Node` from `core:container/intrusive/list`.
+- Field name is fixed. Not configurable.
+
+```odin
+import list "core:container/intrusive/list"
+
+My_Msg :: struct {
+    node: list.Node,  // required
+    data: int,
+}
+```
+
+The `where` clause on all procs enforces this at compile time:
+
+```odin
+where intrinsics.type_has_field(T, "node"),
+      intrinsics.type_field_type(T, "node") == list.Node
+```
+
+If the struct does not have the right `node` field, the compiler gives an error.
+
+---
+
+## `Mailbox($T)` — worker thread mailbox
 
 ### Roles
-* **Sender:** Any thread.
-* **Receiver:** A **Worker Thread** or **Client Thread**. It also may be the sender thread.
+- Sender: any thread.
+- Receiver: worker thread or client thread.
 
 ### Behavior
-* **Producers:** Many threads can send.
-* **Consumers:** One or many threads can receive (**Fan-In / Fan-Out**).
-* **Blocking:** If empty, the receiver thread sleeps. The OS wakes it when a new message arrives.
-* **CPU:** Uses **zero CPU** while blocking.
+- Many threads can send.
+- One or many threads can receive.
+- If empty, the receiver thread sleeps. The OS wakes it when a message arrives.
+- Uses zero CPU while blocking.
 
 ### API
-* **`send(node)`**: Adds data. Signals a thread to wake up.
-* **`try_receive()`**: Checks for data. Returns immediately. Never sleeps.
-* **`wait_receive(timeout)`**: Sleeps until data arrives or time runs out.
-* **`interrupt()`**: Forces all sleeping threads to wake up immediately (status: Interrupted).
-* **`close()`**: Stops all new messages. Wakes all current sleepers (status: Closed).
+- `send(msg)` — adds message, signals one waiter.
+- `try_receive()` — checks for message, returns immediately.
+- `wait_receive(timeout)` — blocks until message arrives, timeout, or interrupt.
+- `interrupt()` — wakes all waiters with `.Interrupted`.
+- `close()` — blocks new sends, wakes all waiters with `.Closed`.
+- `reset()` — clears closed and interrupted flags.
 
+### Internal send pattern
+```odin
+list.push_back(&m.list, &msg.node)
+m.len += 1
+sync.cond_signal(&m.cond)
+```
 
+### Internal receive pattern
+```odin
+raw := list.pop_front(&m.list)
+msg = container_of(raw, T, "node")
+m.len -= 1
+```
 
-## 3. Loop Mailbox (`loop_mbox.odin`)
-This mailbox is for the **nbio thread** (The Engine).
+---
+
+## `Loop_Mailbox($T)` — nbio loop mailbox
 
 ### Roles
-* **Sender:** **Client Threads** or **Workers**.
-* **Receiver:** **ONLY the I/O Engine (nbio thread).**
-
+- Sender: worker threads or client threads.
+- Receiver: the nbio event loop thread only.
 
 ### Behavior
-* **Producers:** Many threads can send.
-* **Consumer:** **Single Receiver only** (The nbio thread).
-* **Waking:** When a sender adds data, it wakeups the nbio loop using `nbio.wake_up`.
-* **No Blocking:** The nbio thread never sleeps inside the mailbox. It only sleeps inside the `nbio.tick()` kernel call.
+- Many threads can send.
+- One receiver only — the nbio thread.
+- The nbio thread never blocks inside the mailbox.
+- It blocks only inside `nbio.tick()`.
+- When a sender adds the first message, it calls `nbio.wake_up` to interrupt the tick.
 
 ### API
-* **`send_to_loop(node)`**: Adds data. Triggers a Windows APC or Linux Event to wake the loop.
-* **`try_receive()`**: The only way to get data. Used inside the loop "Drain" phase.
-* **`close()`**: Stops new messages. The loop thread handles the final cleanup.
+- `send_to_loop(msg)` — adds message, calls `nbio.wake_up` if mailbox was empty.
+- `try_receive_loop()` — returns one message. Never blocks. Call in a loop to drain.
+- `close_loop()` — blocks new sends, calls `nbio.wake_up` once.
+- `stats()` — approximate pending count. Not locked.
 
+### Internal send pattern
+```odin
+was_empty := m.len == 0
+list.push_back(&m.list, &msg.node)
+m.len += 1
+if was_empty { nbio.wake_up(m.loop) }
+```
 
+---
 
-## 4. Key Differences
+## Key differences
 
-| Feature | `Mailbox` (Standard) | `Loop_Mailbox` (nbio) |
-| :--- | :--- | :--- |
-| **Thread Type** | Background Worker / Client | I/O Engine (Proactor) |
-| **Wait Method** | `sync.cond_wait` | `nbio.tick` (Kernel) |
-| **Signal Method** | `sync.cond_signal` | `nbio.wake_up` (Interrupt) |
-| **CPU Usage** | Zero when idle | Zero when idle |
+| Feature | `Mailbox` | `Loop_Mailbox` |
+|---|---|---|
+| Thread type | Worker / client | nbio event loop |
+| Wait method | `sync.cond_wait` | `nbio.tick` |
+| Wake method | `sync.cond_signal` | `nbio.wake_up` |
+| CPU when idle | zero | zero |
+| Blocking receive | yes | no |
 
+---
 
+## Why two types?
 
-## 5. Why Two Types?
-1. **Performance:** Standard mailboxes are too slow for I/O loops. They add extra overhead that `nbio` doesn't need.
-2. **Safety:** If the I/O thread uses `wait_receive`, the network stops. We prevent this by only providing `try_receive`.
-3. **Clean Code:** Each file has one specific job. 
+- A blocking receive on the nbio thread would stop the event loop.
+- `Loop_Mailbox` has no blocking receive. This prevents mistakes.
+- Worker threads do not need `nbio.wake_up`. `Mailbox` is simpler for them.
 
+---
 
-## 6. Summary for Developers
-* Use **`Mailbox`** for negotiation between regular threads.
-* Use **`Loop_Mailbox`** to send _Commands_ to the main network engine.
+## When to use which
+
+- Use `Mailbox` for communication between worker threads.
+- Use `Loop_Mailbox` to send commands to the nbio event loop.

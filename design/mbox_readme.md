@@ -1,107 +1,121 @@
-# mbox - Intrusive Inter-Thread Communication for Odin
+# mbox — Inter-thread mailbox for Odin
 
-![Odin](https://img.shields.io/badge/Odin-v0.x-blue)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Inter-thread mailbox library for Odin. Intrusive. Thread-safe. Zero-allocation.
 
-## A Bit of History, a Bit of Theory
-
-Mailboxes are a fundamental part of the **Actor Model** (originated in 1973). Through the mailbox mechanism, actors can decouple the reception of a message from its elaboration. A mailbox is essentially a thread-safe FIFO data structure that holds messages.
-
-This implementation is inspired by the **iRMX 86™ NUCLEUS** (Intel, 1980), where tasks communicated by visiting mailboxes and waiting for objects. Used this pattern in PL/M-86 and later implemented it in C, C++, C#, Go and Zig, this is the **Odin** version.
-
-## Why?
-If your threads run in "Fire and Forget" mode, you don't need a Mailbox. But in real multithreaded applications, threads communicate as a team. 
-
-**mbox** provides:
-- **Thread Safety**: Built on `core:sync` primitives.
-- **Asynchronous/Unbounded**: Producers don't block; the list grows as needed.
-- **Zero Allocations**: Intrusive nodes mean the data *is* the link. No extra heap allocations per message.
-- **Contextless**: No dependency on the Odin `context` or a specific allocator.
-- **Type Erasure**: Use one mailbox for miscellaneous data types safely.
+Port of [mailbox](https://github.com/g41797/mailbox) (Zig).
 
 ---
 
-## The "Odin Way": Intrusive Usage
+## Background
 
-In an intrusive mailbox, the user-defined struct embeds the link node. To work with miscellaneous data types in a single list, we use a **Tagged Header** and `mem.container_of`.
+Mailboxes come from the Actor Model (1973). A mailbox is a thread-safe FIFO queue. Threads send messages into it. Other threads receive from it.
 
+This design is inspired by iRMX 86 (Intel, 1980), where tasks communicated by posting to mailboxes and waiting for objects.
 
+---
 
-### 1. Define your Messages
+## User struct contract
+
+Your struct must embed a `node` field of type `list.Node`.
+
 ```odin
-import "mbox"
-import "core:mem"
+import list "core:container/intrusive/list"
 
-Msg_Kind :: enum {
-    Join,
-    Chat,
+My_Msg :: struct {
+    node: list.Node,  // required — name must be "node"
+    data: int,
 }
-
-// The "Envelope" or "Header"
-Envelope :: struct {
-    kind: Msg_Kind,
-    node: mbox.Node, // The intrusive link
-}
-
-Join_Msg :: struct {
-    using base: Envelope, // Layout starts with Envelope
-    username:   string,
-}
-
 ```
 
-### 2. Send and Receive
+- The field name is fixed: `node`.
+- The field type is fixed: `list.Node` from `core:container/intrusive/list`.
+- The compiler checks this at compile time via `where` clause.
+
+---
+
+## Two mailbox types
+
+### `Mailbox($T)` — for worker threads
+
+Blocks using a condition variable. The thread sleeps until a message arrives.
 
 ```odin
-// Initialize
-mb: mbox.Mailbox(mbox.Node)
-mbox.mailbox_init(&mb)
+mb: mbox.Mailbox(My_Msg)
 
-// Producer
-msg := new(Join_Msg)
-msg.kind = .Join
-msg.username = "Odin_User"
-mbox.mailbox_send(&mb, &msg.node)
+// sender:
+mbox.send(&mb, &msg)
 
-// Consumer
-node, err := mbox.mailbox_receive(&mb, 100 * time.Millisecond)
-if err == .None {
-    // Re-hydrate the type from the node pointer
-    env := mem.container_of(node, Envelope, "node")
-    
-    switch env.kind {
-    case .Join:
-        j := (^Join_Msg)(env)
-        fmt.println(j.username)
-    }
+// receiver (blocks):
+got, err := mbox.wait_receive(&mb)
+
+// receiver (non-blocking):
+got, ok := mbox.try_receive(&mb)
+```
+
+Error values: `None`, `Timeout`, `Closed`, `Interrupted`.
+
+### `Loop_Mailbox($T)` — for nbio event loops
+
+Non-blocking. Wakes the nbio event loop using `nbio.wake_up`.
+
+```odin
+loop_mb: mbox.Loop_Mailbox(My_Msg)
+loop_mb.loop = nbio.current_thread_event_loop()
+
+// sender (from any thread):
+mbox.send_to_loop(&loop_mb, &msg)
+
+// receiver (inside nbio loop, drain on wake):
+for {
+    msg, ok := mbox.try_receive_loop(&loop_mb)
+    if !ok { break }
+    // handle msg
 }
-
 ```
 
 ---
 
-## API Reference
+## Intrusive design
 
-### Lifecycle
+The message is the node. No heap allocation per message.
 
-* `mailbox_init(mbox)`: Prepares the mutex and condition variables.
-* `mailbox_close(mbox) -> ^T`: Closes the mailbox; returns the head of any remaining unprocessed nodes.
-* `mailbox_destroy(mbox, callback)`: Closes the mailbox and executes a cleanup callback for every remaining node.
+The user owns the message memory. The mailbox just links messages together.
 
-### Operations
+```odin
+msg := My_Msg{data = 42}
+mbox.send(&mb, &msg)   // links &msg.node into the list
+```
 
-* `mailbox_send(mbox, node)`: Enqueues a node and signals receivers.
-* `mailbox_receive(mbox, timeout) -> (^T, Error)`: Dequeues a node. Blocks until data arrives or timeout expires.
-* `mailbox_interrupt(mbox)`: Wakes up a waiting receiver thread immediately.
-* `mailbox_letters(mbox) -> int`: Returns the current number of messages in the queue (thread-safe).
+The caller must keep `msg` alive until it is received.
 
 ---
-## Documentation
-- [Architecture & History](README.md#a-bit-of-history-a-bit-of-theory)
-- [Usage Examples](examples.md) — Includes Tagged Messages, Zero-Allocation signals, and Priority patterns.
 
-## License
+## API summary
 
-[MIT](https://www.google.com/search?q=LICENSE)
+### `Mailbox($T)`
 
-*First rule of multithreading: If you can do without multithreading - do without.*
+| Proc | Description |
+|---|---|
+| `send(&mb, &msg)` | Add message. Returns false if closed. |
+| `try_receive(&mb)` | Return message if available. Never blocks. |
+| `wait_receive(&mb, timeout?)` | Block until message, timeout, or interrupt. |
+| `interrupt(&mb)` | Wake all waiters with `.Interrupted`. |
+| `close(&mb)` | Block new sends. Wake all waiters with `.Closed`. |
+| `reset(&mb)` | Clear closed and interrupted flags. Allow reuse. |
+
+### `Loop_Mailbox($T)`
+
+| Proc | Description |
+|---|---|
+| `send_to_loop(&mb, &msg)` | Add message. Wake loop if it was empty. Returns false if closed. |
+| `try_receive_loop(&mb)` | Return message if available. Never blocks. |
+| `close_loop(&mb)` | Block new sends. Wake loop one last time. |
+| `stats(&mb)` | Approximate pending count (not locked). |
+
+---
+
+## Notes
+
+- Producers do not block. The list grows as needed (no capacity limit).
+- No allocator dependency. No `context` required inside mailbox ops.
+- The `where` clause prevents misuse at compile time. Wrong struct = compile error.

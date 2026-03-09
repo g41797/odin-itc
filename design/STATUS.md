@@ -113,6 +113,12 @@ My_Msg :: struct {
 - Stage 4: Fixed `.github/workflows/ci.yml` — 15 jobs (3 OS × 5 opt), fail-fast disabled
 - Stage 5: All 15 CI jobs green (3 OS × 5 opt)
 - Fix: `odin doc` step changed from `-all-packages` to 3 separate calls per package
+- Stage 6: Real implementation in `mbox.odin` and `loop_mbox.odin` — all 5 opt levels pass locally
+- Stage 7: Real examples in `examples/negotiation.odin` and `examples/stress.odin` — all 5 opt levels pass locally
+- Fix: `sync.cond_timedwait` does not exist — correct name is `sync.cond_wait_with_timeout`
+- Stage 8: Real tests in `tests/all_test.odin` — 12 tests, all 5 opt levels pass locally
+- Fix: test `Msg` type must import `list "core:container/intrusive/list"` directly — `mbox.list` does not work
+- Stage 9: Rewrote README.md. Updated design/mailbox_design.md, design/mbox_readme.md, design/mbox_examples.md
 
 **Note**:
 - `-vet` with generic structs does not count struct field types as import usage.
@@ -121,7 +127,5 @@ My_Msg :: struct {
 - `odin doc ./ -all-packages` dumps entire stdlib. Use `odin doc ./` per package instead.
 
 **Next**:
-- Stage 6: Replace mocks with real implementation
-- Stage 7: Replace mock examples with real examples
-- Stage 8: Replace mock tests with real tests
-- Stage 9: Docs and README
+- Push to GitHub — verify all 15 CI jobs green
+- Project complete
