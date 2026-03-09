@@ -46,4 +46,14 @@ for %%o in (%OPTS%) do (
 )
 
 echo.
+echo --- doc smoke test ---
+odin doc ./
+if !errorlevel! neq 0 ( echo [ERROR] doc failed for root & exit /b !errorlevel! )
+odin doc ./examples/
+if !errorlevel! neq 0 ( echo [ERROR] doc failed for examples & exit /b !errorlevel! )
+odin doc ./tests/
+if !errorlevel! neq 0 ( echo [ERROR] doc failed for tests & exit /b !errorlevel! )
+echo   docs OK
+
+echo.
 echo ALL CHECKS PASSED

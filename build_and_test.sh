@@ -44,4 +44,11 @@ for opt in "${OPTS[@]}"; do
 done
 
 echo
+echo "${BLUE}--- doc smoke test ---${NC}"
+odin doc ./
+odin doc ./examples/
+odin doc ./tests/
+echo "${GREEN}  docs OK${NC}"
+
+echo
 echo "${GREEN}ALL CHECKS PASSED${NC}"

@@ -54,4 +54,7 @@ jobs:
 
       - name: Doc smoke test
         shell: bash
-        run: odin doc ./ -all-packages
+        run: |
+          odin doc ./
+          odin doc ./examples/
+          odin doc ./tests/
