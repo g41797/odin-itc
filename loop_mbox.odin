@@ -48,9 +48,9 @@ send_to_loop :: proc(m: ^Loop_Mailbox($T), node: ^T) -> bool {
 	return true
 }
 
-// try_receive is the ONLY way the nbio thread gets data.
+// try_receive_loop is the ONLY way the nbio thread gets data.
 // It should be called in a loop until it returns nil.
-try_receive :: proc(m: ^Loop_Mailbox($T)) -> (node: ^T, ok: bool) {
+try_receive_loop :: proc(m: ^Loop_Mailbox($T)) -> (node: ^T, ok: bool) {
 	sync.mutex_lock(&m.mutex)
 	defer sync.mutex_unlock(&m.mutex)
 
