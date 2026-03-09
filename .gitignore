@@ -4,7 +4,11 @@ mbox_test.exe
 *.test
 *.test.exe
 
-# Object Files (Temporary artifacts from -no-entrypoint builds)
+# Build artifacts
+*.a
+*.lib
+
+# Object Files
 *.o
 *.obj
 

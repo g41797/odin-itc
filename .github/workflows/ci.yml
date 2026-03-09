@@ -11,30 +11,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         opt: [none, minimal, size, speed, aggressive]
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Odin
+      - name: Install Odin
         uses: laytan/setup-odin@v2
         with:
           odin-version: master
 
-      - name: Build & Test
+      - name: Build root lib
+        shell: bash
         run: |
           if [ "${{ matrix.opt }}" = "none" ]; then
-            odin build ./ -vet -strict-style -o:none -debug -out:build_none
-            odin test ./ -vet -strict-style -disallow-do -o:none -debug -out:test_none
+            odin build . -build-mode:lib -vet -strict-style -o:none -debug
           else
-            odin build ./ -vet -strict-style -o:"${{ matrix.opt }}" -out:build_${{ matrix.opt }}
-            odin test ./ -vet -strict-style -disallow-do -o:"${{ matrix.opt }}" -out:test_${{ matrix.opt }}
+            odin build . -build-mode:lib -vet -strict-style -o:${{ matrix.opt }}
           fi
 
-      - name: Check Documentation
+      - name: Build examples
+        shell: bash
         run: |
-          odin doc ./ -all-packages
+          if [ "${{ matrix.opt }}" = "none" ]; then
+            odin build ./examples/ -build-mode:lib -vet -strict-style -o:none -debug
+          else
+            odin build ./examples/ -build-mode:lib -vet -strict-style -o:${{ matrix.opt }}
+          fi
+
+      - name: Test tests
+        shell: bash
+        run: |
+          if [ "${{ matrix.opt }}" = "none" ]; then
+            odin test ./tests/ -vet -strict-style -disallow-do -o:none -debug
+          else
+            odin test ./tests/ -vet -strict-style -disallow-do -o:${{ matrix.opt }}
+          fi
+
+      - name: Doc smoke test
+        shell: bash
+        run: odin doc ./ -all-packages
