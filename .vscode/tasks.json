@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Odin",
+            "type": "shell",
+            "command": "/home/g41797/.local/bin/odin",
+            "args": [
+                "build",
+                "${workspaceFolder}",
+                "-debug",
+                "-o:none",
+                "-out:${workspaceFolder}/${workspaceFolderBasename}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
