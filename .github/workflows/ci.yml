@@ -58,3 +58,19 @@ jobs:
           odin doc ./
           odin doc ./examples/
           odin doc ./tests/
+
+      - name: Generate doc files
+        if: matrix.os == 'ubuntu-latest' && matrix.opt == 'none'
+        shell: bash
+        run: |
+          mkdir -p doc-out
+          odin doc ./          > doc-out/mbox.txt
+          odin doc ./examples/ > doc-out/examples.txt
+          odin doc ./tests/    > doc-out/tests.txt
+
+      - name: Upload doc artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.opt == 'none'
+        uses: actions/upload-artifact@v4
+        with:
+          name: odin-doc
+          path: doc-out/
