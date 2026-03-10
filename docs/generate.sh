@@ -19,7 +19,7 @@ sed "s|PROJECT_ROOT|$ROOT_DIR|g" odin-doc.json > build/odin-doc.json
 cd build
 
 # Render to HTML using the binary built in tools/
-../../tools/odin-doc ../odin-mbox.odin-doc ./odin-doc.json
+"$ROOT_DIR/tools/odin-doc" ../odin-mbox.odin-doc ./odin-doc.json
 
 # Post-process: remove "Generation Information" sections and TOC links
 find . -name "index.html" -exec sed -i '/<h2 id="pkg-generation-information">/,/<p>Generated with .*<\/p>/d' {} +

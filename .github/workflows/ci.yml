@@ -23,7 +23,8 @@ jobs:
       - name: Install Odin
         uses: laytan/setup-odin@v2
         with:
-          odin-version: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release: dev-2026-03
 
       - name: Build root lib
         shell: bash
