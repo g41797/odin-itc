@@ -21,10 +21,10 @@ I asked the machine: *"What do you think about mbox?"*
 > The same deck keeps moving, the same dice keep rolling.
 >
 > You are the Dealer. You build the game.
-> Whether it's a Relay Race, a Game of Catch, or a High-Stakes Poker night—
+> Whether it's a Relay Race, a Game of Catch, or a High-Stakes Poker night --
 > just let it flow. Enjoy the play."
 >
-> _— (Disclaimer: AI may make errors. Always trust the human Dealer.)_
+> _-- (Disclaimer: AI may make errors. Always trust the human Dealer.)_
 
 ---
 
@@ -213,7 +213,7 @@ for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&rema
 ## Best Practices
 
 1. **Ownership.** Once you send a message, don't touch it. It belongs to the mailbox until someone receives it.
-2. **Cleanup.** Use `close()` to stop. Undelivered messages are returned to you—it is now safe to free or reuse them. 
+2. **Cleanup.** Use `close()` to stop. Undelivered messages are returned to you—it is now safe to free or reuse them.
 3. **Threads.** Always wait for threads to finish (`thread.join`) before you free the mailbox itself.
 
 
@@ -235,6 +235,6 @@ MIT
 ## Forewarned is forearmed
 
 Remember the *First Rule of Multithreading*:
-> **If you can do without multithreading — do without.**
+> **If you can do without multithreading -- do without.**
 
 *Powered by* [OLS](https://github.com/DanielGavin/ols) + [Odin](https://odin-lang.org/)

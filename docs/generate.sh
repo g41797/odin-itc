@@ -23,8 +23,10 @@ cd build
 
 # Post-process: remove "Generation Information" sections and TOC links
 find . -name "index.html" -exec sed -i '/<h2 id="pkg-generation-information">/,/<p>Generated with .*<\/p>/d' {} +
-find . -name "index.html" -exec sed -i '/<li><a href="#pkg-generation-information">Source Files<\/a><\/ul>/d' {} +
-find . -name "index.html" -exec sed -i '/<li><a href="#pkg-generation-information">Generation Information<\/a>/d' {} +
+find . -name "index.html" -exec sed -i '/<li><a href="#pkg-generation-information">/d' {} +
+
+# Fix sidebar link to point to /mbox instead of root
+sed -i 's|href="/mbox"|href="/mbox/"|g' index.html
 
 cd ..
 

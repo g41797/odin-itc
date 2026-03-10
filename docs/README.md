@@ -4,7 +4,7 @@ The endless inter-threaded game...
 
 ---
 
-### 🤖 An AI's Take
+### [AI] An AI's Take
 I asked the machine: *"What do you think about mbox?"*
 
 > **"Place your bets. The game is on.**
@@ -18,10 +18,10 @@ I asked the machine: *"What do you think about mbox?"*
 > The same deck keeps moving, the same dice keep rolling.
 >
 > You are the Dealer. You build the game.
-> Whether it's a Relay Race, a Game of Catch, or a High-Stakes Poker night—
+> Whether it's a Relay Race, a Game of Catch, or a High-Stakes Poker night --
 > just let it flow. Enjoy the play."
 >
-> _— (Disclaimer: AI may make errors. Always trust the human Dealer.)_
+> _-- (Disclaimer: AI may make errors. Always trust the human Dealer.)_
 
 ---
 
@@ -116,4 +116,4 @@ Check the [examples/](https://github.com/g41797/odin-mbox/tree/main/examples) di
 ## Forewarned is forearmed
 
 Remember the *First Rule of Multithreading*:
-> **If you can do without multithreading — do without.**
+> **If you can do without multithreading -- do without.**

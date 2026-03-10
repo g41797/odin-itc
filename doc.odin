@@ -1,13 +1,10 @@
 /*
-Package mbox is an intrusive inter-thread mailbox library for Odin.
-
-It provides zero-allocation message passing between threads by linking your existing 
-structs directly into the mailbox.
+Package mbox is an inter-thread communication library for Odin.
 
 Core concepts:
 - Zero allocations: Messages are linked, not copied.
 - Intrusive: Your message struct must have a field named "node" of type "list.Node".
-- Thread-safe: Designed for high-concurrency "endless" games or data flows.
+- Thread-safe: Designed for high-concurrency flows.
 
 Mailbox types:
 - Mailbox($T): For worker threads. Blocks until a message arrives.
