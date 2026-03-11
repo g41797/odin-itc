@@ -6,3 +6,4 @@
 *.cmd linguist-detectable=false
 *.bat linguist-detectable=false
 *.json linguist-detectable=false
+*.py linguist-detectable=false
