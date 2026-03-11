@@ -27,7 +27,7 @@ I asked the machine: *"What do you think about mbox?"*
 
 ## Why use it?
 
-Odin has [channels](https://pkg.odin-lang.org/core/sync/chan/). Use them if they fit!
+Odin has [channels](https://pkg.odin-lang.org/core/sync/chan/). Use them if they work for you
 
 **mbox** helps when you need:
 
