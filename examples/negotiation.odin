@@ -52,6 +52,10 @@ negotiation_example :: proc() -> bool {
 	request := Msg{data = 10}
 	reply := Msg{}
 
+	// Ensure the loop is initialized and wake-up events are registered.
+	// This is required on some platforms (like macOS) before we can call wake_up.
+	nbio.tick(0)
+
 	// w lives on the main thread stack too.
 	w := _Worker{&loop_mb, &reply_mb, &request, false}
 

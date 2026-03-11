@@ -137,6 +137,7 @@ Worker thread sends a request to the nbio loop. The loop replies via a regular m
 // Setup (on the loop thread):
 loop_mb: mbox.Loop_Mailbox(Req)
 loop_mb.loop = nbio.current_thread_event_loop()
+nbio.tick(0) // Ensure the loop is initialized for wake-up (essential for macOS)
 
 reply_mb: mbox.Mailbox(Reply)
 

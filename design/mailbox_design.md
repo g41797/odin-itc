@@ -193,3 +193,8 @@ You only get ownership back when you `receive()` it or get it from `close()`.
 Always wait for all threads to finish (`thread.join`) before you free the mailbox itself.
 The mailbox must stay alive as long as any thread can still access it.
 
+### 4. nbio loop initialization
+On some platforms (like macOS/kqueue), `nbio.wake_up` requires that the event loop has been ticked at least once to register the internal wake-up event in the kernel. 
+
+Before starting any threads that might call `send_to_loop` or `close_loop`, call `nbio.tick(0)` on the loop thread. This ensures the loop is fully initialized and ready to receive wake-up signals from other threads.
+

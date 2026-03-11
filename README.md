@@ -164,15 +164,18 @@ for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&rema
 ### nbio loop mailbox
 
 ```odin
-// sender thread:
-mbox.send_to_loop(&loop_mb, &msg)
+// nbio loop (receiver thread):
+loop_mb.loop = nbio.current_thread_event_loop()
+nbio.tick(0) // Ensure loop is ready for wake-ups (essential for macOS)
 
-// nbio loop:
 for {
     msg, ok := mbox.try_receive_loop(&loop_mb)
     if !ok { break }
     // process msg
 }
+
+// sender thread:
+mbox.send_to_loop(&loop_mb, &msg)
 ```
 
 ---
