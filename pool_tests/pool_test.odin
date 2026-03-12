@@ -499,3 +499,131 @@ test_pool_get_timeout_destroy_wakes :: proc(t: ^testing.T) {
 	testing.expect(t, got == nil, "get should return nil when pool is destroyed")
 	testing.expect(t, status == .Closed, "status should be .Closed")
 }
+
+// ----------------------------------------------------------------------------
+// New multi-waiter pool tests
+// ----------------------------------------------------------------------------
+
+// _N_Pool_Ctx holds state for one thread in multi-waiter pool tests.
+_N_Pool_Ctx :: struct {
+	pool:    ^pool_pkg.Pool(Test_Msg),
+	idx:     int,
+	started: ^sync.Sema,
+	done:    ^sync.Sema,
+	result:  pool_pkg.Pool_Status,
+	got:     ^Test_Msg,
+}
+
+// test_pool_many_waiters_partial_fill: 10 threads wait with 2s timeout.
+// Put 5 messages back after all threads are waiting.
+// 5 threads must get .Ok, 5 must get .Pool_Empty.
+@(test)
+test_pool_many_waiters_partial_fill :: proc(t: ^testing.T) {
+	p: pool_pkg.Pool(Test_Msg)
+	pool_pkg.init(&p, reset = nil)
+	defer pool_pkg.destroy(&p)
+
+	N :: 10
+	started: sync.Sema
+	done: sync.Sema
+	ctxs: [N]_N_Pool_Ctx
+	threads: [N]^thread.Thread
+
+	for i in 0 ..< N {
+		ctxs[i] = _N_Pool_Ctx{pool = &p, idx = i, started = &started, done = &done}
+		threads[i] = thread.create_and_start_with_data(&ctxs[i], proc(data: rawptr) {
+			c := (^_N_Pool_Ctx)(data)
+			sync.sema_post(c.started)
+			c.got, c.result = pool_pkg.get(c.pool, .Pool_Only, 2 * time.Second)
+			sync.sema_post(c.done)
+		})
+	}
+
+	// Wait for all threads to be running and ready.
+	for _ in 0 ..< N {
+		sync.sema_wait(&started)
+	}
+	time.sleep(20 * time.Millisecond)
+
+	// Pre-allocate 5 messages (sets allocator field), then put them back.
+	// Each put wakes one waiting thread via cond_signal.
+	pre_msgs: [5]^Test_Msg
+	for i in 0 ..< 5 {
+		pre_msgs[i], _ = pool_pkg.get(&p)
+	}
+	for i in 0 ..< 5 {
+		pool_pkg.put(&p, pre_msgs[i])
+	}
+
+	for _ in 0 ..< N {
+		sync.sema_wait(&done)
+	}
+	for i in 0 ..< N {
+		thread.join(threads[i])
+		thread.destroy(threads[i])
+	}
+
+	ok_count := 0
+	empty_count := 0
+	for i in 0 ..< N {
+		#partial switch ctxs[i].result {
+		case .Ok:
+			ok_count += 1
+			if ctxs[i].got != nil {
+				free(ctxs[i].got, ctxs[i].got.allocator)
+			}
+		case .Pool_Empty:
+			empty_count += 1
+		}
+	}
+	testing.expect(t, ok_count == 5, "5 threads should get a message")
+	testing.expect(t, empty_count == 5, "5 threads should time out with .Pool_Empty")
+}
+
+// test_pool_destroy_wakes_all: 10 threads wait with infinite timeout.
+// destroy() must wake all 10 with .Closed.
+@(test)
+test_pool_destroy_wakes_all :: proc(t: ^testing.T) {
+	p: pool_pkg.Pool(Test_Msg)
+	pool_pkg.init(&p, reset = nil)
+
+	N :: 10
+	started: sync.Sema
+	done: sync.Sema
+	ctxs: [N]_N_Pool_Ctx
+	threads: [N]^thread.Thread
+
+	for i in 0 ..< N {
+		ctxs[i] = _N_Pool_Ctx{pool = &p, idx = i, started = &started, done = &done}
+		threads[i] = thread.create_and_start_with_data(&ctxs[i], proc(data: rawptr) {
+			c := (^_N_Pool_Ctx)(data)
+			sync.sema_post(c.started)
+			c.got, c.result = pool_pkg.get(c.pool, .Pool_Only, -1)
+			sync.sema_post(c.done)
+		})
+	}
+
+	// Wait for all threads to be running and ready.
+	for _ in 0 ..< N {
+		sync.sema_wait(&started)
+	}
+	time.sleep(20 * time.Millisecond)
+
+	pool_pkg.destroy(&p)
+
+	for _ in 0 ..< N {
+		sync.sema_wait(&done)
+	}
+	for i in 0 ..< N {
+		thread.join(threads[i])
+		thread.destroy(threads[i])
+	}
+
+	closed_count := 0
+	for i in 0 ..< N {
+		if ctxs[i].result == .Closed {
+			closed_count += 1
+		}
+	}
+	testing.expect(t, closed_count == 10, "all 10 threads should get .Closed after destroy")
+}
