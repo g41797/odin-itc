@@ -228,7 +228,7 @@ init_loop_mailbox :: proc(m: ^Loop_Mailbox($T), w: wakeup.WakeUper) -> Loop_Mail
 
 ---
 
-### Stage 5 — Pool WakeUper  ← NEXT
+### Stage 5 — Pool WakeUper  ✓ DONE (Session 75)
 
 **Purpose**:
 Add optional `wakeup.WakeUper` to the pool so event-loop callers can be notified
@@ -239,8 +239,8 @@ when a message returns to an empty pool, instead of blocking on `sync.Cond`.
 **Behavior** (additive — Cond blocking unchanged):
 - `get(.Pool_Only, 0)` returns `.Pool_Empty` and sets `p.empty_was_returned = true`.
 - `get(.Pool_Only, timeout<0 or >0)` still blocks on `sync.Cond` (unchanged).
-- `put` signals `sync.Cond` (unchanged), then if `empty_was_returned == true` and `waker.wake != nil`: calls `waker.wake(waker.ctx)`, clears flag.
-- `destroy` calls `cond_broadcast` (unchanged), then if waker set: `waker.wake(waker.ctx)` then `waker.close(waker.ctx)`.
+- `put`: signals `sync.Cond` (unchanged). Calls `waker.wake` only when pool transitions empty→non-empty AND `empty_was_returned` was true. Always clears flag. Wake called outside mutex. (Zig-aligned — original plan said: wake if flag set, ignoring empty state.)
+- `destroy`: calls `cond_broadcast` (unchanged), then calls `waker.close` only — no wake. (Zig-aligned — original plan said: wake + close.)
 - WakeUper is optional. Pass `{}` to `init` for none.
 
 **Pool struct changes**:
@@ -264,7 +264,42 @@ Pool :: struct($T: typeid) {
 
 ---
 
-### Stage 6 — Repartitioning
+### Stage 5b — Pool Hardening  ✓ DONE (Session 76)
+
+**Purpose**: Follow-up fixes and tests before repartitioning.
+Decided after reading Zig Pool.zig and reviewing Strategic Analysis section.
+
+**pool/pool.odin changes**:
+- Re-init guard: `init` returns `(false, .Closed)` if `p.state == .Active`.
+  Prevents silent free-list leak on double-init. Guard fires before any field is modified.
+- `length` proc: returns `curr_msgs` under mutex. Thread-safe. Same where clause as all pool procs.
+
+**pool_tests/ restructure**:
+- 5 heavy threaded tests move from `pool_test.odin` to `pool_tests/edge_test.odin`:
+  test_pool_get_timeout_elapsed, test_pool_get_timeout_put_wakes,
+  test_pool_get_timeout_destroy_wakes, test_pool_many_waiters_partial_fill,
+  test_pool_destroy_wakes_all (with _Put_Wakes_Ctx, _Destroy_Wakes_Ctx, _N_Pool_Ctx).
+- 2 new tests added to `pool_test.odin`: test_pool_reinit_active, test_pool_length.
+- `pool_tests/edge_test.odin` (NEW): 5 moved + 5 new stress/edge tests:
+  test_pool_stress_high_volume (10 threads × 1000 ops),
+  test_pool_max_limit_racing (concurrent puts at cap),
+  test_pool_shutdown_race (put+reset window during destroy),
+  test_pool_idempotent_destroy (10 threads call destroy simultaneously),
+  test_pool_allocator_integrity (custom allocator, verify all allocs tracked).
+
+**Test counts**: pool_test.odin 26 + edge_test.odin 10 = 36 total pool_tests.
+All other suites unchanged.
+
+**Files changed**:
+- `pool/pool.odin`
+- `pool_tests/pool_test.odin`
+- `pool_tests/edge_test.odin` (NEW)
+- `design/loop-mbox-enhancement.md` (Stage 5b section)
+- `design/STATUS.md` (session entry)
+
+---
+
+### Stage 6 — Repartitioning  ← NEXT
 
 **Purpose**:
 - Move `mbox.odin` → `mbox/mbox.odin` (Mailbox only, no mpsc/wakeup deps)
@@ -356,11 +391,23 @@ Details TBD when we reach this stage.
 ### 5. Documentation Strategy (Stage 8)
 - **Willings**: Per-package READMEs must include a "Copy-Pasteable" example for that specific package. This makes the library more attractive to developers who only need one component (like the lock-free queue).
 
+### 6. Pool Re-initialization Check
+- **Context**: `pool.init` currently overwrites fields without checking the current state.
+- **Recommendation**: Consider adding a check to return an error if `init` is called on a pool that is already `.Active`. This prevents accidental memory leaks of an existing free-list.
+
+### 7. Pool Shutdown Race Safety
+- **Context**: In `pool.put`, the `reset` hook is called outside the mutex.
+- **Consideration**: We must ensure that if one thread calls `destroy` (marking state `.Closed`) while another is in the middle of a `put.reset`, no invalid operations occur. A dedicated stress test is needed to verify this specific window.
+
+### 8. Pool Statistics API
+- **Recommendation**: Add a public `pool.length(p)` or `pool.stats(p)` procedure. 
+- **Reason**: This matches the API pattern of `mbox` and `mpsc`, providing a read-only, consistent way to check the free-list size without accessing internal struct fields.
+
 ---
 
 ## Edge Cases & Missing Tests Strategy
 
-To keep `queue_test.odin` and `wakeup_test.odin` clean as "runner of examples" and basic unit tests, we will create separate files for edge cases and stress tests.
+To keep `queue_test.odin`, `wakeup_test.odin`, and `pool_test.odin` clean as "runner of examples" and basic unit tests, we will create separate files for edge cases and stress tests.
 
 ### 1. MPSC Edge Cases (`mpsc/edge_test.odin`)
 - **Concurrent Push Stress**: 10 threads pushing 10,000 items each while 1 thread pops. Verify total count and no lost items.
@@ -375,6 +422,13 @@ To keep `queue_test.odin` and `wakeup_test.odin` clean as "runner of examples" a
 - **Custom WakeUper**: Implement a simple dummy `WakeUper` in the test to verify the interface works without `sema_wakeup`.
 - **Missed Test**: `test_ctx_persistence` — check that the `rawptr` passed to `wake` and `close` is bit-for-bit identical to the one provided during creation.
 
+### 3. Pool Edge Cases (`pool_tests/edge_test.odin`)
+- **High-Volume Stress**: 10 threads performing 10,000 `get(.Always)` and `put` operations. Verify zero leaks and zero double-frees using the memory tracker.
+- **Max Limit Racing**: Multiple threads calling `put` on a pool that is exactly at `max_msgs`. Verify `curr_msgs` never exceeds the cap and all excess messages are freed correctly.
+- **Shutdown Race Stress**: 5 threads constantly calling `put` while another thread calls `destroy`. Ensures transition from `.Active` to `.Closed` is safe even if `reset` is running.
+- **Idempotent Destroy**: Multiple threads calling `destroy` at the same time. Verify no crashes or double-frees.
+- **Allocator Integrity**: Use a custom tracking allocator to ensure the pool never falls back to `context.allocator` for internal `new`/`free` calls.
+
 ---
 
 ## Critical files
@@ -387,11 +441,9 @@ To keep `queue_test.odin` and `wakeup_test.odin` clean as "runner of examples" a
 | `mpsc/queue.odin` | 3 | NEW |
 | `mpsc/doc.odin` | 3 | NEW |
 | `mpsc/queue_test.odin` | 3 | NEW (unit tests) |
-| `mpsc/edge_test.odin` | 3 | NEW (edge + stress tests) |
-| `wakeup/wakeup.odin` | 4 | NEW + nil-check guards in _sema_wake/_sema_close |
+| `wakeup/wakeup.odin` | 4 | NEW |
 | `wakeup/doc.odin` | 4 | NEW |
 | `wakeup/wakeup_test.odin` | 4 | NEW (unit tests) |
-| `wakeup/edge_test.odin` | 4 | NEW (edge + concurrent tests) |
 | `pool/pool.odin` | 5 | Modify (add waker, empty_was_returned) |
 | `pool_tests/pool_test.odin` | 5 | Add WakeUper tests |
 | `mbox.odin` → `mbox/mbox.odin` | 6 | MOVE |

@@ -8,8 +8,9 @@ import list "core:container/intrusive/list"
 import "core:mem"
 import "core:sync"
 import "core:time"
+import wakeup "../wakeup"
 
-// _PoolNode, _PoolMutex, _PoolAllocator, _PoolEvent, _PoolDuration keep -vet happy — it does not count generic field types as import usage.
+// _PoolNode, _PoolMutex, _PoolAllocator, _PoolEvent, _PoolDuration, _PoolWaker keep -vet happy — it does not count generic field types as import usage.
 @(private)
 _PoolNode :: list.Node
 @(private)
@@ -20,6 +21,8 @@ _PoolAllocator :: mem.Allocator
 _PoolEvent :: Pool_Event
 @(private)
 _PoolDuration :: time.Duration
+@(private)
+_PoolWaker :: wakeup.WakeUper
 
 // Pool_State is the internal lifecycle of a pool.
 Pool_State :: enum {
@@ -53,14 +56,16 @@ Allocation_Strategy :: enum {
 // Uses the same "node" field as mbox. A message is never in both at once.
 // T must have a field named "node" of type list.Node and "allocator" of type mem.Allocator.
 Pool :: struct($T: typeid) {
-	allocator: mem.Allocator,
-	mutex:     sync.Mutex,
-	cond:      sync.Cond, // wakes waiting get(.Pool_Only) calls
-	list:      list.List,
-	curr_msgs: int,
-	max_msgs:  int, // 0 = unlimited
-	state:     Pool_State, // lifecycle state
-	reset:     proc(msg: ^T, e: Pool_Event), // optional, called outside mutex
+	allocator:          mem.Allocator,
+	mutex:              sync.Mutex,
+	cond:               sync.Cond, // wakes waiting get(.Pool_Only) calls
+	list:               list.List,
+	curr_msgs:          int,
+	max_msgs:           int, // 0 = unlimited
+	state:              Pool_State, // lifecycle state
+	reset:              proc(msg: ^T, e: Pool_Event), // optional, called outside mutex
+	waker:              wakeup.WakeUper, // optional — notify non-blocking callers; pass {} for none
+	empty_was_returned: bool, // true when get(.Pool_Only,0) found empty; cleared on next put
 }
 
 // init prepares the pool and pre-allocates initial_msgs messages.
@@ -73,6 +78,7 @@ init :: proc(
 	initial_msgs := 0,
 	max_msgs := 0,
 	reset: proc(_: ^T, _: Pool_Event),
+	waker: wakeup.WakeUper = {},
 	allocator := context.allocator,
 ) -> (
 	bool,
@@ -83,9 +89,13 @@ init :: proc(
 	intrinsics.type_has_field(T, "allocator"),
 	intrinsics.type_field_type(T, "allocator") ==
 	mem.Allocator {
+	if p.state == .Active {
+		return false, .Closed
+	}
 	p.allocator = allocator
 	p.max_msgs = max_msgs
 	p.reset = reset
+	p.waker = waker
 
 	for _ in 0 ..< initial_msgs {
 		msg := new(T, allocator)
@@ -140,6 +150,7 @@ get :: proc(
 	raw := list.pop_front(&p.list)
 	if raw == nil && strategy == .Pool_Only {
 		if timeout == 0 {
+			p.empty_was_returned = true
 			sync.mutex_unlock(&p.mutex)
 			return nil, .Pool_Empty
 		}
@@ -224,11 +235,19 @@ put :: proc(p: ^Pool($T), msg: ^T) -> ^T where intrinsics.type_has_field(T, "nod
 		return nil
 	}
 
+	pool_was_empty := p.list.head == nil // capture before push (Zig-aligned: only wake on empty→non-empty)
 	msg.node = {}
 	list.push_back(&p.list, &msg.node)
 	p.curr_msgs += 1
 	sync.cond_signal(&p.cond) // wake one waiting get(.Pool_Only)
+	was_flag := p.empty_was_returned
+	p.empty_was_returned = false // always clear
+	waker := p.waker
 	sync.mutex_unlock(&p.mutex)
+	// Call wake outside mutex to avoid deadlock if wake acquires a lock.
+	if pool_was_empty && was_flag && waker.wake != nil {
+		waker.wake(waker.ctx)
+	}
 	return nil
 }
 
@@ -260,5 +279,24 @@ destroy :: proc(p: ^Pool($T)) where intrinsics.type_has_field(T, "node"),
 		free(msg, alloc)
 	}
 	sync.cond_broadcast(&p.cond) // wake all waiting get(.Pool_Only) calls
+	waker := p.waker
 	sync.mutex_unlock(&p.mutex)
+	// Free waker resources. Do not call wake — callers polling with get(.Pool_Only,0) will get .Closed on next call.
+	if waker.close != nil {
+		waker.close(waker.ctx)
+	}
+}
+
+// length returns the number of messages currently in the free-list.
+// Thread-safe. Reads curr_msgs under mutex.
+length :: proc(p: ^Pool($T)) -> int where intrinsics.type_has_field(T, "node"),
+	intrinsics.type_field_type(T, "node") ==
+	list.Node,
+	intrinsics.type_has_field(T, "allocator"),
+	intrinsics.type_field_type(T, "allocator") ==
+	mem.Allocator {
+	sync.mutex_lock(&p.mutex)
+	n := p.curr_msgs
+	sync.mutex_unlock(&p.mutex)
+	return n
 }
