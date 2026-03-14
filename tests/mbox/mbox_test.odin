@@ -1,7 +1,8 @@
 //+test
-package tests
+package mbox_tests
 
-import mbox "../mbox"
+import mbox "../../mbox"
+import examples "../../examples"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
 import "core:sync"
@@ -9,28 +10,22 @@ import "core:testing"
 import "core:thread"
 import "core:time"
 
-// Msg is the local test message type.
-Msg :: struct {
-	node: list.Node,
-	data: int,
-}
-
 // _Multi_Waiter_Ctx holds state for one thread in multi-waiter tests.
 _Multi_Waiter_Ctx :: struct {
-	mb:     ^mbox.Mailbox(Msg),
+	mb:     ^mbox.Mailbox(examples.Msg),
 	result: mbox.Mailbox_Error,
 	done:   ^sync.Sema,
 }
 
 // _Sender_Ctx holds state for one sender thread in test_heavy_racing.
 _Sender_Ctx :: struct {
-	mb:   ^mbox.Mailbox(Msg),
-	msgs: []Msg,
+	mb:   ^mbox.Mailbox(examples.Msg),
+	msgs: []examples.Msg,
 }
 
 // _Receiver_Ctx holds state for one receiver thread in test_heavy_racing.
 _Receiver_Ctx :: struct {
-	mb:       ^mbox.Mailbox(Msg),
+	mb:       ^mbox.Mailbox(examples.Msg),
 	received: ^int,
 }
 
@@ -40,8 +35,8 @@ _Receiver_Ctx :: struct {
 
 @(test)
 test_send_and_receive :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	m := new(Msg); m.data = 42
+	mb: mbox.Mailbox(examples.Msg)
+	m := new(examples.Msg); m.data = 42
 
 	ok := mbox.send(&mb, m)
 	testing.expect(t, ok, "send should return true")
@@ -54,7 +49,7 @@ test_send_and_receive :: proc(t: ^testing.T) {
 
 @(test)
 test_empty_returns_timeout :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	got, err := mbox.wait_receive(&mb, 0)
 	testing.expect(t, err == .Timeout, "empty mailbox should return .Timeout")
 	testing.expect(t, got == nil, "empty mailbox should return nil message")
@@ -62,14 +57,14 @@ test_empty_returns_timeout :: proc(t: ^testing.T) {
 
 @(test)
 test_timeout_on_empty :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	_, err := mbox.wait_receive(&mb, 10 * time.Millisecond)
 	testing.expect(t, err == .Timeout, "wait_receive on empty mailbox should timeout")
 }
 
 @(test)
 test_zero_timeout :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	_, err := mbox.wait_receive(&mb, 0)
 	testing.expect(
 		t,
@@ -80,8 +75,8 @@ test_zero_timeout :: proc(t: ^testing.T) {
 
 @(test)
 test_close_blocks_send :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	m := new(Msg); m.data = 1; defer free(m)
+	mb: mbox.Mailbox(examples.Msg)
+	m := new(examples.Msg); m.data = 1; defer free(m)
 
 	_, _ = mbox.close(&mb)
 
@@ -91,7 +86,7 @@ test_close_blocks_send :: proc(t: ^testing.T) {
 
 @(test)
 test_close_wakes_waiter :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	result: mbox.Mailbox_Error
 	done: sync.Sema
 
@@ -100,7 +95,7 @@ test_close_wakes_waiter :: proc(t: ^testing.T) {
 		&mb,
 		&result,
 		&done,
-		proc(mb: ^mbox.Mailbox(Msg), result: ^mbox.Mailbox_Error, done: ^sync.Sema) {
+		proc(mb: ^mbox.Mailbox(examples.Msg), result: ^mbox.Mailbox_Error, done: ^sync.Sema) {
 			_, err := mbox.wait_receive(mb)
 			result^ = err
 			sync.sema_post(done)
@@ -116,9 +111,9 @@ test_close_wakes_waiter :: proc(t: ^testing.T) {
 
 @(test)
 test_close_returns_remaining :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	a := new(Msg); a.data = 10
-	b := new(Msg); b.data = 20
+	mb: mbox.Mailbox(examples.Msg)
+	a := new(examples.Msg); a.data = 10
+	b := new(examples.Msg); b.data = 20
 
 	mbox.send(&mb, a)
 	mbox.send(&mb, b)
@@ -128,7 +123,7 @@ test_close_returns_remaining :: proc(t: ^testing.T) {
 
 	count := 0
 	for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&remaining) {
-		free((^Msg)(node))
+		free((^examples.Msg)(node))
 		count += 1
 	}
 	testing.expect(t, count == 2, "close should return 2 remaining messages")
@@ -136,7 +131,7 @@ test_close_returns_remaining :: proc(t: ^testing.T) {
 
 @(test)
 test_double_close :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	_, was_open1 := mbox.close(&mb)
 	_, was_open2 := mbox.close(&mb)
 	testing.expect(t, was_open1, "first close should return was_open=true")
@@ -145,7 +140,7 @@ test_double_close :: proc(t: ^testing.T) {
 
 @(test)
 test_interrupt_wakes_waiter :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	result: mbox.Mailbox_Error
 	done: sync.Sema
 
@@ -154,7 +149,7 @@ test_interrupt_wakes_waiter :: proc(t: ^testing.T) {
 		&mb,
 		&result,
 		&done,
-		proc(mb: ^mbox.Mailbox(Msg), result: ^mbox.Mailbox_Error, done: ^sync.Sema) {
+		proc(mb: ^mbox.Mailbox(examples.Msg), result: ^mbox.Mailbox_Error, done: ^sync.Sema) {
 			_, err := mbox.wait_receive(mb)
 			result^ = err
 			sync.sema_post(done)
@@ -177,7 +172,7 @@ test_interrupt_wakes_waiter :: proc(t: ^testing.T) {
 
 @(test)
 test_double_interrupt :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	ok1 := mbox.interrupt(&mb)
 	ok2 := mbox.interrupt(&mb)
 	testing.expect(t, ok1, "first interrupt should return true")
@@ -186,7 +181,7 @@ test_double_interrupt :: proc(t: ^testing.T) {
 
 @(test)
 test_interrupt_on_closed :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	_, _ = mbox.close(&mb)
 	ok := mbox.interrupt(&mb)
 	testing.expect(t, !ok, "interrupt on closed mailbox should return false")
@@ -194,8 +189,8 @@ test_interrupt_on_closed :: proc(t: ^testing.T) {
 
 @(test)
 test_reuse_via_zero :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	m := new(Msg); m.data = 7
+	mb: mbox.Mailbox(examples.Msg)
+	m := new(examples.Msg); m.data = 7
 
 	_, _ = mbox.close(&mb)
 	mb = {} // reinitialize — safe after no waiters
@@ -214,10 +209,10 @@ test_reuse_via_zero :: proc(t: ^testing.T) {
 
 @(test)
 test_fifo_order :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	a := new(Msg); a.data = 1
-	b := new(Msg); b.data = 2
-	c := new(Msg); c.data = 3
+	mb: mbox.Mailbox(examples.Msg)
+	a := new(examples.Msg); a.data = 1
+	b := new(examples.Msg); b.data = 2
+	c := new(examples.Msg); c.data = 3
 
 	mbox.send(&mb, a)
 	mbox.send(&mb, b)
@@ -237,14 +232,14 @@ test_fifo_order :: proc(t: ^testing.T) {
 
 @(test)
 test_wait_receive_gets_message :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 
 	// Allocate on the main thread. Worker sends it after a delay.
 	// Receiver frees it. Allocation and free happen in the same thread (main).
-	m := new(Msg)
+	m := new(examples.Msg)
 	m.data = 99
 
-	thread.run_with_poly_data2(&mb, m, proc(mb: ^mbox.Mailbox(Msg), m: ^Msg) {
+	thread.run_with_poly_data2(&mb, m, proc(mb: ^mbox.Mailbox(examples.Msg), m: ^examples.Msg) {
 		time.sleep(5 * time.Millisecond)
 		mbox.send(mb, m)
 	})
@@ -265,7 +260,7 @@ test_wait_receive_gets_message :: proc(t: ^testing.T) {
 // close() must wake all 5 with .Closed.
 @(test)
 test_many_waiters_wake_on_close :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	N :: 5
 	done: sync.Sema
 	ctxs: [N]_Multi_Waiter_Ctx
@@ -302,7 +297,7 @@ test_many_waiters_wake_on_close :: proc(t: ^testing.T) {
 // Exactly 1 thread gets .None. Then close() wakes the remaining 4 with .Closed.
 @(test)
 test_many_waiters_one_message :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	N :: 5
 	done: sync.Sema
 	ctxs: [N]_Multi_Waiter_Ctx
@@ -321,7 +316,7 @@ test_many_waiters_one_message :: proc(t: ^testing.T) {
 	}
 
 	time.sleep(20 * time.Millisecond)
-	msgs := make([]Msg, 1); defer delete(msgs)
+	msgs := make([]examples.Msg, 1); defer delete(msgs)
 	msgs[0].data = 42
 	mbox.send(&mb, &msgs[0])
 
@@ -354,7 +349,7 @@ test_many_waiters_one_message :: proc(t: ^testing.T) {
 // Then close() wakes the remaining 4 with .Closed.
 @(test)
 test_many_waiters_one_interrupt :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	N :: 5
 	done: sync.Sema
 	ctxs: [N]_Multi_Waiter_Ctx
@@ -404,8 +399,8 @@ test_many_waiters_one_interrupt :: proc(t: ^testing.T) {
 // All 1000 messages must be received. No crashes.
 @(test)
 test_heavy_racing :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
-	msgs := make([]Msg, 1_000)
+	mb: mbox.Mailbox(examples.Msg)
+	msgs := make([]examples.Msg, 1_000)
 	defer delete(msgs)
 
 	received: int
@@ -463,7 +458,7 @@ test_heavy_racing :: proc(t: ^testing.T) {
 // close() clears the interrupted flag, so .Closed takes precedence.
 @(test)
 test_interrupted_then_closed :: proc(t: ^testing.T) {
-	mb: mbox.Mailbox(Msg)
+	mb: mbox.Mailbox(examples.Msg)
 	mbox.interrupt(&mb)
 	mbox.close(&mb)
 	_, err := mbox.wait_receive(&mb, 0)

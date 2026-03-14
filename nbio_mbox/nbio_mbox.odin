@@ -3,19 +3,22 @@
 
 package nbio_mbox
 
+import try_mbox "../try_mbox"
+import wakeup "../wakeup"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
 import "core:mem"
 import "core:nbio"
 import "core:net"
 import "core:time"
-import try_mbox "../try_mbox"
-import wakeup "../wakeup"
 
 // -vet workarounds: some import usages are not detected in all contexts.
-@(private) _NBioList     :: list.Node
-@(private) _NBioDuration :: time.Duration
-@(private) _NBioWaker    :: wakeup.WakeUper
+@(private)
+_NBioList :: list.Node
+@(private)
+_NBioDuration :: time.Duration
+@(private)
+_NBioWaker :: wakeup.WakeUper
 
 // Nbio_Wakeuper_Kind selects the mechanism used to wake the nbio event loop.
 //   .Timeout — zero-duration nbio timeout (original approach; 128-slot cross-thread queue)
@@ -25,8 +28,8 @@ Nbio_Wakeuper_Kind :: enum {
 	UDP,
 }
 
-// Loop_Mailbox_Error is the error returned by init_nbio_mbox.
-Loop_Mailbox_Error :: enum {
+// Nbio_Mailbox_Error is the error returned by init_nbio_mbox.
+Nbio_Mailbox_Error :: enum {
 	None,
 	Invalid_Loop,
 	Keepalive_Failed,
@@ -43,7 +46,7 @@ _NBio_State :: struct {
 	loop:         ^nbio.Event_Loop,
 	keepalive:    ^nbio.Operation,
 	allocator:    mem.Allocator,
-	ref_count:    int,  // atomic
+	ref_count:    int, // atomic
 	wake_pending: bool, // atomic — guards the cross-thread timeout queue (capacity 128)
 }
 
@@ -102,7 +105,10 @@ _nbio_close :: proc(ctx: rawptr) {
 _init_timeout_wakeup :: proc(
 	loop: ^nbio.Event_Loop,
 	allocator: mem.Allocator,
-) -> (waker: wakeup.WakeUper, ok: bool) {
+) -> (
+	waker: wakeup.WakeUper,
+	ok: bool,
+) {
 	state := new(_NBio_State, allocator)
 	if state == nil {
 		return {}, false
@@ -188,7 +194,10 @@ _udp_close :: proc(ctx: rawptr) {
 _init_udp_wakeup :: proc(
 	loop: ^nbio.Event_Loop,
 	allocator: mem.Allocator,
-) -> (waker: wakeup.WakeUper, ok: bool) {
+) -> (
+	waker: wakeup.WakeUper,
+	ok: bool,
+) {
 	state := new(_UDP_State, allocator)
 	if state == nil {
 		return {}, false
@@ -267,8 +276,12 @@ init_nbio_mbox :: proc(
 	loop: ^nbio.Event_Loop,
 	kind := Nbio_Wakeuper_Kind.UDP,
 	allocator := context.allocator,
-) -> (^try_mbox.Mbox(T), Loop_Mailbox_Error) where intrinsics.type_has_field(T, "node"),
-	intrinsics.type_field_type(T, "node") == list.Node {
+) -> (
+	^try_mbox.Mbox(T),
+	Nbio_Mailbox_Error,
+) where intrinsics.type_has_field(T, "node"),
+	intrinsics.type_field_type(T, "node") ==
+	list.Node {
 	if loop == nil {
 		return nil, .Invalid_Loop
 	}

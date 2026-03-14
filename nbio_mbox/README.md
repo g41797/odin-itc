@@ -45,10 +45,10 @@ try_mbox.send(m, msg)
 // event-loop thread — drain in the tick loop:
 for {
     nbio.tick(timeout)
-    for {
-        msg, ok := try_mbox.try_receive(m)
-        if !ok { break }
-        // handle msg
+    batch := try_mbox.try_receive_batch(m)
+    for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
+        msg := (^Msg)(node)
+        // handle msg — free or return to pool
     }
 }
 ```
@@ -59,7 +59,7 @@ for {
 |-----------|--------|
 | `init_nbio_mbox` | any thread |
 | `try_mbox.send` | any thread |
-| `try_mbox.try_receive` | event-loop thread only |
+| `try_mbox.try_receive_batch` | event-loop thread only |
 | `try_mbox.close` | event-loop thread only |
 | `try_mbox.destroy` | event-loop thread (after close) |
 

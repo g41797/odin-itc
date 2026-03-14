@@ -49,3 +49,8 @@ Optional reset proc:
 - Called outside the pool mutex.
 */
 package pool
+
+/*
+Note: Some test procedures may appear in the generated documentation. 
+This is because they are part of the same package to allow for white-box testing.
+*/

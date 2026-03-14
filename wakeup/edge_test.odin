@@ -1,3 +1,4 @@
+//+test
 package wakeup
 
 import "core:sync"

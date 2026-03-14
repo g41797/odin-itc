@@ -37,8 +37,13 @@ Quick start:
 	// event-loop thread:
 	for {
 		nbio.tick(timeout)
-		msg, ok := try_mbox.try_receive(m)
-		if ok { /* handle */ }
+		batch := try_mbox.try_receive_batch(m)
+		for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
+			msg := (^Msg)(node)
+			_ = msg // handle — free or return to pool
+		}
 	}
+
+
 */
 package nbio_mbox

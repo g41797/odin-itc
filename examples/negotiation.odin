@@ -4,18 +4,8 @@ import mbox "../mbox"
 import nbio_mbox "../nbio_mbox"
 import try_mbox "../try_mbox"
 import list "core:container/intrusive/list"
-import "core:mem"
 import "core:nbio"
 import "core:thread"
-
-// Msg is the shared message type for all examples.
-// "node" is required by mbox (and pool). The name is fixed. The type is list.Node.
-// "allocator" is required by pool — set by pool.get on every retrieval.
-Msg :: struct {
-	node:      list.Node,
-	allocator: mem.Allocator,
-	data:      int,
-}
 
 // _Worker holds pointers to both mailboxes and the result.
 @(private)
@@ -79,10 +69,12 @@ negotiation_example :: proc(kind: nbio_mbox.Nbio_Wakeuper_Kind = .UDP) -> bool {
 		if tick_err != nil {
 			break
 		}
-		msg, ok := try_mbox.try_receive(loop_mb)
-		if ok {
+		nb := try_mbox.try_receive_batch(loop_mb)
+		node := list.pop_front(&nb)
+		if node != nil {
 			// Reuse the received message as the reply.
 			// No extra allocation needed. Ownership stays with the worker.
+			msg := (^Msg)(node)
 			msg.data = msg.data + 1
 			mbox.send(&reply_mb, msg)
 			break

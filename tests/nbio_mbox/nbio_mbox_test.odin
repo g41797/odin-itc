@@ -1,29 +1,21 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-package nbio_mbox
+//+test
+package nbio_mbox_tests
 
-import "base:intrinsics"
+import nbio_mbox "../../nbio_mbox"
+import try_mbox "../../try_mbox"
+import examples "../../examples"
 import list "core:container/intrusive/list"
 import "core:nbio"
 import "core:testing"
 import "core:time"
-import try_mbox "../try_mbox"
-
-// -vet: keep list import used.
-@(private) _TL :: list.Node
-@(private) _TI :: intrinsics.type_has_field
-
-// _Test_Msg is the message type used in unit tests.
-_Test_Msg :: struct {
-	node: list.Node,
-	data: int,
-}
 
 // test_nbio_mbox_invalid_loop: nil loop must return (nil, .Invalid_Loop).
 @(test)
 test_nbio_mbox_invalid_loop :: proc(t: ^testing.T) {
-	m, err := init_nbio_mbox(_Test_Msg, nil)
+	m, err := nbio_mbox.init_nbio_mbox(examples.Msg, nil)
 	testing.expect(t, m == nil, "init with nil loop should return nil mbox")
 	testing.expect(t, err == .Invalid_Loop, "init with nil loop should return .Invalid_Loop")
 }
@@ -37,7 +29,7 @@ test_nbio_mbox_timeout_kind :: proc(t: ^testing.T) {
 	defer nbio.release_thread_event_loop()
 	loop := nbio.current_thread_event_loop()
 
-	m, err := init_nbio_mbox(_Test_Msg, loop, .Timeout)
+	m, err := nbio_mbox.init_nbio_mbox(examples.Msg, loop, .Timeout)
 	if !testing.expect(t, err == .None, "init .Timeout failed") {
 		return
 	}
@@ -46,14 +38,15 @@ test_nbio_mbox_timeout_kind :: proc(t: ^testing.T) {
 		try_mbox.destroy(m)
 	}
 
-	msg := new(_Test_Msg)
+	msg := new(examples.Msg)
 	msg.data = 11
 	try_mbox.send(m, msg)
 
 	nbio.tick(10 * time.Millisecond)
 
-	got, ok := try_mbox.try_receive(m)
-	testing.expect(t, ok && got != nil && got.data == 11, "should receive the sent message")
+	b1 := try_mbox.try_receive_batch(m)
+	got := (^examples.Msg)(list.pop_front(&b1))
+	testing.expect(t, got != nil && got.data == 11, "should receive the sent message")
 	if got != nil {
 		free(got)
 	}
@@ -68,7 +61,7 @@ test_nbio_mbox_udp_kind :: proc(t: ^testing.T) {
 	defer nbio.release_thread_event_loop()
 	loop := nbio.current_thread_event_loop()
 
-	m, err := init_nbio_mbox(_Test_Msg, loop, .UDP)
+	m, err := nbio_mbox.init_nbio_mbox(examples.Msg, loop, .UDP)
 	if !testing.expect(t, err == .None, "init .UDP failed") {
 		return
 	}
@@ -77,15 +70,16 @@ test_nbio_mbox_udp_kind :: proc(t: ^testing.T) {
 		try_mbox.destroy(m)
 	}
 
-	msg := new(_Test_Msg)
+	msg := new(examples.Msg)
 	msg.data = 22
 	try_mbox.send(m, msg)
 
 	// tick lets the UDP recv callback fire and re-arm.
 	nbio.tick(10 * time.Millisecond)
 
-	got, ok := try_mbox.try_receive(m)
-	testing.expect(t, ok && got != nil && got.data == 22, "should receive the sent message")
+	b2 := try_mbox.try_receive_batch(m)
+	got := (^examples.Msg)(list.pop_front(&b2))
+	testing.expect(t, got != nil && got.data == 22, "should receive the sent message")
 	if got != nil {
 		free(got)
 	}
@@ -101,7 +95,7 @@ test_nbio_mbox_udp_default_kind :: proc(t: ^testing.T) {
 	loop := nbio.current_thread_event_loop()
 
 	// No kind argument — should pick .UDP.
-	m, err := init_nbio_mbox(_Test_Msg, loop)
+	m, err := nbio_mbox.init_nbio_mbox(examples.Msg, loop)
 	if !testing.expect(t, err == .None, "init with default kind failed") {
 		return
 	}
@@ -110,13 +104,14 @@ test_nbio_mbox_udp_default_kind :: proc(t: ^testing.T) {
 		try_mbox.destroy(m)
 	}
 
-	msg := new(_Test_Msg)
+	msg := new(examples.Msg)
 	msg.data = 33
 	try_mbox.send(m, msg)
 	nbio.tick(10 * time.Millisecond)
 
-	got, ok := try_mbox.try_receive(m)
-	testing.expect(t, ok && got != nil && got.data == 33, "should receive the sent message")
+	b3 := try_mbox.try_receive_batch(m)
+	got := (^examples.Msg)(list.pop_front(&b3))
+	testing.expect(t, got != nil && got.data == 33, "should receive the sent message")
 	if got != nil {
 		free(got)
 	}

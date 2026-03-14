@@ -7,8 +7,8 @@ import "core:sync"
 import "core:testing"
 import "core:time"
 
-import pool_pkg "../pool"
-import wakeup_pkg "../wakeup"
+import pool_pkg "../../pool"
+import wakeup_pkg "../../wakeup"
 
 // Test_Msg is the message type used in all pool tests.
 // allocator field is required by the pool where clause.

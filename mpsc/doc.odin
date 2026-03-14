@@ -25,3 +25,8 @@ The stub sentinel node holds its own address in head and tail.
 Copying the struct after init invalidates those pointers.
 */
 package mpsc
+
+/*
+Note: Some test procedures may appear in the generated documentation. 
+This is because they are part of the same package to allow for white-box testing.
+*/

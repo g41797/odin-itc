@@ -1,3 +1,4 @@
+//+test
 package mpsc
 
 import "core:testing"

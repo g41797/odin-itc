@@ -59,20 +59,20 @@ send :: proc(m: ^Mbox($T), msg: ^T) -> bool where intrinsics.type_has_field(T, "
 	return true
 }
 
-// try_receive pops one message without blocking. Single-consumer only.
-// Returns (nil, false) if the queue is empty, in a stall state, or closed.
-// On stall (length > 0 but nil returned): caller retries on the next tick. Do not
-// call in a tight loop — busy-polling defeats the non-blocking contract.
-try_receive :: proc(m: ^Mbox($T)) -> (^T, bool) where intrinsics.type_has_field(T, "node"),
-	intrinsics.type_field_type(T, "node") == list.Node {
-	msg := mpsc.pop(&m.queue)
-	return msg, msg != nil
-}
-
-// try_receive_all pops all available messages without blocking. Single-consumer only.
+// try_receive_batch pops all available messages without blocking. Single-consumer only.
 // Returns an empty list if the queue is empty or in stall state.
 // On stall: some in-flight messages may not appear — caller retries on the next tick.
-try_receive_all :: proc(m: ^Mbox($T)) -> list.List where intrinsics.type_has_field(T, "node"),
+//
+// Correct drain pattern:
+//   batch := try_receive_batch(m)
+//   for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
+//       msg := (^T)(node)  // valid only when node is the first field of T (offset 0)
+//       // handle msg
+//   }
+//
+// Cast safety: (^T)(node) is valid only when node is the first field of T at offset 0.
+// If node is not first, use: msg := (^T)(uintptr(node) - uintptr(offset_of(T, node)))
+try_receive_batch :: proc(m: ^Mbox($T)) -> list.List where intrinsics.type_has_field(T, "node"),
 	intrinsics.type_field_type(T, "node") == list.Node {
 	result: list.List
 	for {

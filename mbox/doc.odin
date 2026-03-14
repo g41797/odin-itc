@@ -26,6 +26,10 @@ Typical usage:
 	// receiver thread:
 	got, err := mbox.wait_receive(&mb)
 
-Use Loop_Mailbox (package nbio_mbox) for non-blocking nbio event-loop integration.
 */
 package mbox
+
+/*
+Note: Some test procedures may appear in the generated documentation.
+This is because they are part of the same package to allow for white-box testing.
+*/

@@ -21,3 +21,8 @@ Usage:
 Call close when done. close frees internal resources.
 */
 package wakeup
+
+/*
+Note: Some test procedures may appear in the generated documentation.
+This is because they are part of the same package to allow for white-box testing.
+*/

@@ -176,7 +176,9 @@ defer {
 
 for {
     nbio.tick() // process I/O and wake-up tasks
-    for msg, ok := try_mbox.try_receive(m); ok; msg, ok = try_mbox.try_receive(m) {
+    batch := try_mbox.try_receive_batch(m)
+    for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
+        msg := (^My_Msg)(node)
         // handle message, then free or return to pool
     }
 }

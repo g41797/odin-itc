@@ -9,7 +9,7 @@ import "core:testing"
 import "core:thread"
 import "core:time"
 
-import pool_pkg "../pool"
+import pool_pkg "../../pool"
 
 // ----------------------------------------------------------------------------
 // Context types for threaded tests
