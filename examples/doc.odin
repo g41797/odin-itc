@@ -1,5 +1,5 @@
 /*
-Package examples contains runnable demos for odin-mbox.
+Package examples contains runnable demos for odin-itc.
 
 Each proc returns true on success.
 

@@ -1,4 +1,4 @@
-# odin-mbox
+# odin-itc
 
 The endless inter-threaded game...
 
@@ -72,7 +72,7 @@ Both are thread-safe. Both have zero allocations for sending or receiving.
 
 ## Examples
 
-Check the [examples/](https://github.com/g41797/odin-mbox/tree/main/examples) directory for:
+Check the [examples/](https://github.com/g41797/odin-itc/tree/main/examples) directory for:
 
 - **Endless Game**: 4 threads pass a single heap-allocated message in a circle.
 - **Negotiation**: Request and reply between a worker thread and an `nbio` loop.
@@ -93,8 +93,8 @@ Check the [examples/](https://github.com/g41797/odin-mbox/tree/main/examples) di
 
 ## Learn more
 
-- [Architecture details](https://github.com/g41797/odin-mbox/blob/main/design/mailbox_design.md)
-- [Common usage patterns](https://github.com/g41797/odin-mbox/blob/main/design/mbox_examples.md)
+- [Architecture details](https://github.com/g41797/odin-itc/blob/main/design/mailbox_design.md)
+- [Common usage patterns](https://github.com/g41797/odin-itc/blob/main/design/mbox_examples.md)
 
 ---
 

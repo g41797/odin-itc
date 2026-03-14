@@ -1,4 +1,4 @@
-# odin-mbox Ring Logo Prompt
+# odin-itc Ring Logo Prompt
 
 ## Concept
 

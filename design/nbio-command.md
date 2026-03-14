@@ -175,7 +175,7 @@ on_any_io_done :: proc(op: ^nbio.Operation) {
 ## The Lost Wake-up Problem
 
 ### The Claim
-Set up nbio before sending signals. 
+Set up nbio before sending signals.
 The loop must be listening to catch signals for external queues.
 
 ### The AnalysisA "lost wake-up" is a race condition.
@@ -195,8 +195,8 @@ nbio does not check external queues before it sleeps.
 - The loop thread then sleeps for the full timeout.
 
 ### Summary
-nbio wake-up is for internal tasks. 
-It misses our external Loop_Mailbox queue. 
+nbio wake-up is for internal tasks.
+It misses our external Loop_Mailbox queue.
 
 ### The Solution: no-op
 A no-op makes wake-up reliable.
@@ -205,7 +205,7 @@ A no-op makes wake-up reliable.
 - nbio has its own internal queue.
 - It checks this queue right before it sleeps.
 - Loop_Mailbox is an external queue.
-- nbio checks its own queue before sleep. It misses our queue. 
+- nbio checks its own queue before sleep. It misses our queue.
 - We add a no-op to its queue. Now nbio sees our messages too.
 
 #### The Pattern
@@ -213,8 +213,8 @@ A no-op makes wake-up reliable.
 2. Add a no-op task to nbio using nbio.timeout(0, noop, loop).
 3. nbio.exec (called by timeout) will call wake_up.
 
-This uses nbio race-protection for our queue. 
-odin-mbox does this in send_to_loop.
+This uses nbio race-protection for our queue.
+odin-itc does this in send_to_loop.
 Users do not need manual sync.
 Handle commands and I/O on one thread.
 

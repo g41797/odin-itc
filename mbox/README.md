@@ -18,7 +18,7 @@ Msg :: struct {
 ## Quick start
 
 ```odin
-import mbox "path/to/odin-mbox/mbox"
+import mbox "path/to/odin-itc/mbox"
 
 mb: mbox.Mailbox(Msg)
 

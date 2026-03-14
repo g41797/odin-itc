@@ -1,10 +1,10 @@
 ![](_logo/ring_mbox.png)
 
-# odin-mbox
+# odin-itc
 
 The endless inter-threaded game...
 
-[![CI](https://github.com/g41797/odin-mbox/actions/workflows/ci.yml/badge.svg)](https://github.com/g41797/odin-mbox/actions/workflows/ci.yml)
+[![CI](https://github.com/g41797/odin-itc/actions/workflows/ci.yml/badge.svg)](https://github.com/g41797/odin-itc/actions/workflows/ci.yml)
 
 
 ---
@@ -161,7 +161,7 @@ Handle commands and I/O on one thread.
 A no-op makes wake-up work on all systems.
 
 ```odin
-import try_mbox "path/to/odin-mbox/try_mbox"
+import try_mbox "path/to/odin-itc/try_mbox"
 
 // nbio loop (receiver thread):
 loop := nbio.current_thread_event_loop()
@@ -195,7 +195,7 @@ try_mbox.send(m, &msg) // msg = nil after this — mbox owns it
 This example shows the full lifecycle: allocation, interruption, and cleanup.
 
 ```odin
-import mbox "path/to/odin-mbox"
+import mbox "path/to/odin-itc"
 import list "core:container/intrusive/list"
 
 mb: mbox.Mailbox(My_Msg)
@@ -230,7 +230,7 @@ for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&rema
 To reuse messages, use the `pool` package.
 
 ```odin
-import pool_pkg "path/to/odin-mbox/pool"
+import pool_pkg "path/to/odin-itc/pool"
 import "core:mem"
 import "core:time"
 

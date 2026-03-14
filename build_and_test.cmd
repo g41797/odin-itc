@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 set OPTS=none minimal size speed aggressive
 
-echo Starting odin-mbox local CI (Windows)...
+echo Starting odin-itc local CI (Windows)...
 
 for %%o in (%OPTS%) do (
     echo.
