@@ -1,5 +1,5 @@
 /*
-try_mbox: MPSC queue based mailbox for event loops and worker loops.
+loop_mbox: MPSC queue based mailbox for event loops and worker loops.
 
 The consumer calls try_receive_batch — no blocking, no mutex on the receive path.
 Multiple producers call send concurrently. One consumer calls try_receive_batch.
@@ -25,6 +25,7 @@ Thread model:
                        must be called after all senders have stopped (threads joined)
   destroy            : any thread after close (no concurrent access remains)
 
+Idiom reference: design/idioms.md
 */
 
-package try_mbox
+package loop_mbox

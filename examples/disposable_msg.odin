@@ -19,6 +19,7 @@ DisposableMsg :: struct {
 // disposable_reset clears stale state without freeing internal resources.
 // Pool calls it automatically on get (before handing to caller) and on put (before free-list).
 // Does NOT free name. Pool reuses the slot.
+// [itc: reset-vs-dispose]
 disposable_reset :: proc(msg: ^DisposableMsg, _: pool_pkg.Pool_Event) {
 	msg.name = ""
 }
@@ -26,6 +27,7 @@ disposable_reset :: proc(msg: ^DisposableMsg, _: pool_pkg.Pool_Event) {
 // disposable_dispose frees all internal resources, then frees the struct.
 // Follows the ^Maybe(^T) contract: nil inner is a no-op. Sets inner to nil on return.
 // Caller uses this for permanent cleanup. Pool and mailbox never call it.
+// [itc: dispose-contract]
 disposable_dispose :: proc(msg: ^Maybe(^DisposableMsg)) {
 	if msg^ == nil {return}
 	ptr := (msg^).?
@@ -77,8 +79,8 @@ disposable_msg_example :: proc() -> bool {
 		return false
 	}
 
-	m: Maybe(^DisposableMsg) = msg
-	defer disposable_dispose(&m) // no-op if send succeeded
+	m: Maybe(^DisposableMsg) = msg // [itc: disposable-msg]
+	defer disposable_dispose(&m) // no-op if send succeeded // [itc: defer-dispose]
 
 	m.?.name = strings.clone("hello", m.?.allocator)
 	if mbox.send(&mb, &m) {

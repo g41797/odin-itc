@@ -12,7 +12,7 @@ lifecycle_example :: proc() -> bool {
 
 	// 1. Create a message.
 	// You own the memory.
-	m: Maybe(^Msg) = new(Msg)
+	m: Maybe(^Msg) = new(Msg) // [itc: maybe-container]
 	m.?.data = 100
 
 	// 2. Interrupt — no message yet, so the waiter gets .Interrupted.

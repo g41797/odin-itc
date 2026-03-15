@@ -87,7 +87,7 @@ The compiler checks this for you. If the field is missing, it won't compile.
 | Type | For | How it waits |
 |---|---|---|
 | `Mailbox($T)` | Worker threads | Blocks the thread until a message arrives. |
-| `try_mbox.Mbox($T)` | nbio loops | Wakes the loop. Never blocks the thread. Created by `init_nbio_mbox`. |
+| `loop_mbox.Mbox($T)` | nbio loops | Wakes the loop. Never blocks the thread. Created by `init_nbio_mbox`. |
 
 Both are thread-safe. Both have zero allocations for sending or receiving.
 
@@ -161,22 +161,22 @@ Handle commands and I/O on one thread.
 A no-op makes wake-up work on all systems.
 
 ```odin
-import try_mbox "path/to/odin-itc/try_mbox"
+import loop_mbox "path/to/odin-itc/loop_mbox"
 
 // nbio loop (receiver thread):
 loop := nbio.current_thread_event_loop()
 m, _ := mbox.init_nbio_mbox(My_Msg, loop)
 defer {
-    remaining, _ := try_mbox.close(m)
+    remaining, _ := loop_mbox.close(m)
     for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&remaining) {
         free(container_of(node, My_Msg, "node"))
     }
-    try_mbox.destroy(m)
+    loop_mbox.destroy(m)
 }
 
 for {
     nbio.tick() // process I/O and wake-up tasks
-    batch := try_mbox.try_receive_batch(m)
+    batch := loop_mbox.try_receive_batch(m)
     for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
         msg := (^My_Msg)(node)
         // handle message, then free or return to pool
@@ -185,7 +185,7 @@ for {
 
 // sender thread: allocate on heap, send.
 msg: Maybe(^My_Msg) = new(My_Msg)
-try_mbox.send(m, &msg) // msg = nil after this — mbox owns it
+loop_mbox.send(m, &msg) // msg = nil after this — mbox owns it
 ```
 
 ---

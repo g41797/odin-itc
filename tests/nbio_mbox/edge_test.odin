@@ -2,7 +2,7 @@
 package nbio_mbox_tests
 
 import nbio_mbox "../../nbio_mbox"
-import try_mbox "../../try_mbox"
+import loop_mbox "../../loop_mbox"
 import examples "../../examples"
 import list "core:container/intrusive/list"
 import "core:nbio"
@@ -21,22 +21,22 @@ _PC_N_PER :: 1_000
 
 // Context structs for nbio edge tests.
 _TE_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	msgs: []examples.Msg,
 }
 
 _BM_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	slab: []examples.Msg,
 }
 
 _PC_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	msgs: []examples.Msg,
 }
 
 _LA_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	a:    ^examples.Msg,
 	b:    ^examples.Msg,
 	sema: ^sync.Sema,
@@ -63,8 +63,8 @@ _test_nbio_throttle_efficiency :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msgs := make([]examples.Msg, _TE_N)
@@ -83,7 +83,7 @@ _test_nbio_throttle_efficiency :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 		c := (^_TE_Ctx)(data)
 		for i in 0 ..< len(c.msgs) {
 			msg_opt: Maybe(^examples.Msg) = &c.msgs[i]
-			try_mbox.send(c.m, &msg_opt)
+			loop_mbox.send(c.m, &msg_opt)
 		}
 	})
 
@@ -93,7 +93,7 @@ _test_nbio_throttle_efficiency :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 		if tick_err != nil {
 			break
 		}
-		tb := try_mbox.try_receive_batch(m)
+		tb := loop_mbox.try_receive_batch(m)
 		for node := list.pop_front(&tb); node != nil; node = list.pop_front(&tb) {
 			received += 1
 		}
@@ -103,7 +103,7 @@ _test_nbio_throttle_efficiency :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 	thread.destroy(th)
 
 	// Drain any residual (stall window).
-	tr := try_mbox.try_receive_batch(m)
+	tr := loop_mbox.try_receive_batch(m)
 	for node := list.pop_front(&tr); node != nil; node = list.pop_front(&tr) {
 		received += 1
 	}
@@ -136,8 +136,8 @@ _test_nbio_burst_multiproducer :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	slabs := make([][]examples.Msg, _BM_N_THREADS)
@@ -168,7 +168,7 @@ _test_nbio_burst_multiproducer :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 			c := (^_BM_Ctx)(data)
 			for i in 0 ..< len(c.slab) {
 				msg_opt: Maybe(^examples.Msg) = &c.slab[i]
-				try_mbox.send(c.m, &msg_opt)
+				loop_mbox.send(c.m, &msg_opt)
 			}
 		})
 	}
@@ -179,7 +179,7 @@ _test_nbio_burst_multiproducer :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 		if tick_err != nil {
 			break
 		}
-		bb := try_mbox.try_receive_batch(m)
+		bb := loop_mbox.try_receive_batch(m)
 		for node := list.pop_front(&bb); node != nil; node = list.pop_front(&bb) {
 			received += 1
 		}
@@ -191,7 +191,7 @@ _test_nbio_burst_multiproducer :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeu
 	}
 
 	// Drain any residual.
-	br := try_mbox.try_receive_batch(m)
+	br := loop_mbox.try_receive_batch(m)
 	for node := list.pop_front(&br); node != nil; node = list.pop_front(&br) {
 		received += 1
 	}
@@ -224,8 +224,8 @@ _test_nbio_pool_constancy :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msgs := make([]examples.Msg, _PC_N_PER)
@@ -246,7 +246,7 @@ _test_nbio_pool_constancy :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 			c := (^_PC_Ctx)(data)
 			for i in 0 ..< len(c.msgs) {
 				msg_opt: Maybe(^examples.Msg) = &c.msgs[i]
-				try_mbox.send(c.m, &msg_opt)
+				loop_mbox.send(c.m, &msg_opt)
 			}
 		})
 
@@ -256,7 +256,7 @@ _test_nbio_pool_constancy :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 			if tick_err != nil {
 				break
 			}
-			pb := try_mbox.try_receive_batch(m)
+			pb := loop_mbox.try_receive_batch(m)
 			for node := list.pop_front(&pb); node != nil; node = list.pop_front(&pb) {
 				received += 1
 			}
@@ -266,7 +266,7 @@ _test_nbio_pool_constancy :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 		thread.destroy(th)
 
 		// Drain residual.
-		pr := try_mbox.try_receive_batch(m)
+		pr := loop_mbox.try_receive_batch(m)
 		for node := list.pop_front(&pr); node != nil; node = list.pop_front(&pr) {
 			received += 1
 		}
@@ -307,8 +307,8 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	a := new(examples.Msg); a.data = 1
@@ -327,9 +327,9 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	proc(data: rawptr) {
 		c := (^_LA_Ctx)(data)
 		// Send A first, then wait until main signals, then send B.
-		a_opt: Maybe(^examples.Msg) = c.a; try_mbox.send(c.m, &a_opt)
+		a_opt: Maybe(^examples.Msg) = c.a; loop_mbox.send(c.m, &a_opt)
 		sync.sema_wait(c.sema)
-		b_opt: Maybe(^examples.Msg) = c.b; try_mbox.send(c.m, &b_opt)
+		b_opt: Maybe(^examples.Msg) = c.b; loop_mbox.send(c.m, &b_opt)
 	},
 	)
 
@@ -337,7 +337,7 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	got_a: ^examples.Msg
 	for _ in 0 ..< 200 {
 		nbio.tick(20 * time.Millisecond)
-		lab := try_mbox.try_receive_batch(m)
+		lab := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&lab)
 		if node != nil {
 			got_a = (^examples.Msg)(node)
@@ -354,7 +354,7 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	got_b: ^examples.Msg
 	for _ in 0 ..< 200 {
 		nbio.tick(20 * time.Millisecond)
-		lbb := try_mbox.try_receive_batch(m)
+		lbb := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&lbb)
 		if node != nil {
 			got_b = (^examples.Msg)(node)

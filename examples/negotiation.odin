@@ -2,7 +2,7 @@ package examples
 
 import mbox "../mbox"
 import nbio_mbox "../nbio_mbox"
-import try_mbox "../try_mbox"
+import loop_mbox "../loop_mbox"
 import list "core:container/intrusive/list"
 import "core:nbio"
 import "core:thread"
@@ -10,7 +10,7 @@ import "core:thread"
 // _Worker holds pointers to both mailboxes and the result.
 @(private)
 _Worker :: struct {
-	loop_mb:  ^try_mbox.Mbox(Msg),
+	loop_mb:  ^loop_mbox.Mbox(Msg),
 	reply_mb: ^mbox.Mailbox(Msg),
 	ok:       bool,
 }
@@ -18,7 +18,7 @@ _Worker :: struct {
 // negotiation_example shows request-reply between a worker thread and an nbio event loop.
 //
 // Flow:
-//   worker  →  try_mbox  →  nbio loop
+//   worker  →  loop_mbox  →  nbio loop
 //   nbio loop →  Mailbox  →  worker
 //
 // - Worker allocates a request on the heap, sends it to the loop.
@@ -40,8 +40,8 @@ negotiation_example :: proc(kind: nbio_mbox.Nbio_Wakeuper_Kind = .UDP) -> bool {
 		return false
 	}
 	defer {
-		try_mbox.close(loop_mb)
-		try_mbox.destroy(loop_mb)
+		loop_mbox.close(loop_mb)
+		loop_mbox.destroy(loop_mb)
 	}
 
 	// reply_mb sends replies back to the worker.
@@ -51,9 +51,9 @@ negotiation_example :: proc(kind: nbio_mbox.Nbio_Wakeuper_Kind = .UDP) -> bool {
 
 	// Worker: allocates request, sends to loop, waits for reply, frees reply.
 	t := thread.create_and_start_with_poly_data(&w, proc(w: ^_Worker) {
-		req: Maybe(^Msg) = new(Msg)
+		req: Maybe(^Msg) = new(Msg) // [itc: maybe-container]
 		req.?.data = 10
-		if !try_mbox.send(w.loop_mb, &req) {
+		if !loop_mbox.send(w.loop_mb, &req) {
 			if mp, ok := req.?; ok {free(mp)}
 			return
 		}
@@ -72,7 +72,7 @@ negotiation_example :: proc(kind: nbio_mbox.Nbio_Wakeuper_Kind = .UDP) -> bool {
 		if tick_err != nil {
 			break
 		}
-		nb := try_mbox.try_receive_batch(loop_mb)
+		nb := loop_mbox.try_receive_batch(loop_mb)
 		node := list.pop_front(&nb)
 		if node != nil {
 			// Reuse the received message as the reply.

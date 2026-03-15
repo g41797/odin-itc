@@ -36,7 +36,7 @@ close_example :: proc() -> bool {
 	mb = {}
 
 	// Allocate two messages on the heap.
-	a: Maybe(^Msg) = new(Msg)
+	a: Maybe(^Msg) = new(Msg) // [itc: maybe-container]
 	a.?.data = 1
 	b: Maybe(^Msg) = new(Msg)
 	b.?.data = 2

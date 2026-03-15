@@ -34,8 +34,8 @@ pool_wait_example :: proc() -> bool {
 					break
 				}
 				if err == .None {
-					msg_opt: Maybe(^Msg) = msg
-					_, _ = pool_pkg.put(p, &msg_opt)
+					msg_opt: Maybe(^Msg) = msg // [itc: maybe-container]
+					_, _ = pool_pkg.put(p, &msg_opt) // [itc: defer-put]
 					count += 1
 				}
 			}

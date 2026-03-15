@@ -49,7 +49,7 @@ master_example :: proc() -> bool {
 		master_shutdown(&m)
 		return false
 	}
-	msg_opt: Maybe(^Msg) = msg
+	msg_opt: Maybe(^Msg) = msg // [itc: maybe-container]
 	msg_opt.?.data = 42
 	ok := mbox.send(&m.inbox, &msg_opt)
 	if !ok {

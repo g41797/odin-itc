@@ -26,6 +26,8 @@ Your struct must have two fields:
 	    data:      int,
 	}
 
+Idiom reference: design/idioms.md
+
 Status returns:
 - init returns (bool, Pool_Status): (true, .Ok) on success; (false, .Out_Of_Memory) on pre-allocation failure.
 - get returns (^T, Pool_Status): .Ok, .Pool_Empty, .Out_Of_Memory, or .Closed.

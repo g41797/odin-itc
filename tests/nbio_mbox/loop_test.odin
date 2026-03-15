@@ -2,7 +2,7 @@
 package nbio_mbox_tests
 
 import nbio_mbox "../../nbio_mbox"
-import try_mbox "../../try_mbox"
+import loop_mbox "../../loop_mbox"
 import examples "../../examples"
 import list "core:container/intrusive/list"
 import "core:nbio"
@@ -12,13 +12,13 @@ import "core:time"
 
 // _Loop_Wake_Ctx holds state for the sender thread in test_loop_wake_on_send.
 _Loop_Wake_Ctx :: struct {
-	m:   ^try_mbox.Mbox(examples.Msg),
+	m:   ^loop_mbox.Mbox(examples.Msg),
 	msg: ^examples.Msg,
 }
 
 // _HF_Ctx holds state for the high-frequency sender thread in test_loop_high_freq_send.
 _HF_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	msgs: []examples.Msg,
 }
 
@@ -46,20 +46,20 @@ _test_loop_basic :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kind) {
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	a_ptr := new(examples.Msg); a_ptr.data = 1
 	b_ptr := new(examples.Msg); b_ptr.data = 2
 	c_ptr := new(examples.Msg); c_ptr.data = 3
-	a_opt: Maybe(^examples.Msg) = a_ptr; try_mbox.send(m, &a_opt)
-	b_opt: Maybe(^examples.Msg) = b_ptr; try_mbox.send(m, &b_opt)
-	c_opt: Maybe(^examples.Msg) = c_ptr; try_mbox.send(m, &c_opt)
+	a_opt: Maybe(^examples.Msg) = a_ptr; loop_mbox.send(m, &a_opt)
+	b_opt: Maybe(^examples.Msg) = b_ptr; loop_mbox.send(m, &b_opt)
+	c_opt: Maybe(^examples.Msg) = c_ptr; loop_mbox.send(m, &c_opt)
 
-	testing.expect(t, try_mbox.length(m) == 3, "length should be 3 after 3 sends")
+	testing.expect(t, loop_mbox.length(m) == 3, "length should be 3 after 3 sends")
 
-	batch := try_mbox.try_receive_batch(m)
+	batch := loop_mbox.try_receive_batch(m)
 	msg1 := (^examples.Msg)(list.pop_front(&batch))
 	msg2 := (^examples.Msg)(list.pop_front(&batch))
 	msg3 := (^examples.Msg)(list.pop_front(&batch))
@@ -98,16 +98,16 @@ _test_loop_close_and_drain :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	a := new(examples.Msg); a.data = 10
 	b := new(examples.Msg); b.data = 20
-	a_opt: Maybe(^examples.Msg) = a; try_mbox.send(m, &a_opt)
-	b_opt: Maybe(^examples.Msg) = b; try_mbox.send(m, &b_opt)
+	a_opt: Maybe(^examples.Msg) = a; loop_mbox.send(m, &a_opt)
+	b_opt: Maybe(^examples.Msg) = b; loop_mbox.send(m, &b_opt)
 
-	remaining, was_open := try_mbox.close(m)
+	remaining, was_open := loop_mbox.close(m)
 	testing.expect(t, was_open, "first close should return was_open=true")
 
 	count := 0
@@ -119,7 +119,7 @@ _test_loop_close_and_drain :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_
 
 	extra := new(examples.Msg); extra.data = 99; defer free(extra)
 	extra_opt: Maybe(^examples.Msg) = extra
-	ok := try_mbox.send(m, &extra_opt)
+	ok := loop_mbox.send(m, &extra_opt)
 	testing.expect(t, !ok, "send after close should return false")
 }
 
@@ -147,8 +147,8 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msg := new(examples.Msg); msg.data = 77
@@ -162,7 +162,7 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		c := (^_Loop_Wake_Ctx)(data)
 		time.sleep(10 * time.Millisecond) // Give loop time to enter tick()
 		msg_opt: Maybe(^examples.Msg) = c.msg
-		try_mbox.send(c.m, &msg_opt)
+		loop_mbox.send(c.m, &msg_opt)
 	},
 	)
 
@@ -172,7 +172,7 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		if tick_err != nil {
 			break
 		}
-		wb := try_mbox.try_receive_batch(m)
+		wb := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&wb)
 		if node != nil {
 			got = (^examples.Msg)(node)
@@ -181,7 +181,7 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	}
 
 	if got == nil {
-		fb := try_mbox.try_receive_batch(m)
+		fb := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&fb)
 		if node != nil {got = (^examples.Msg)(node)}
 	}
@@ -226,8 +226,8 @@ _test_loop_high_freq_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msgs := make([]examples.Msg, _HF_N)
@@ -246,7 +246,7 @@ _test_loop_high_freq_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 		c := (^_HF_Ctx)(data)
 		for i in 0 ..< len(c.msgs) {
 			msg_opt: Maybe(^examples.Msg) = &c.msgs[i]
-			try_mbox.send(c.m, &msg_opt)
+			loop_mbox.send(c.m, &msg_opt)
 		}
 	})
 
@@ -256,7 +256,7 @@ _test_loop_high_freq_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 		if tick_err != nil {
 			break
 		}
-		hb := try_mbox.try_receive_batch(m)
+		hb := loop_mbox.try_receive_batch(m)
 		for node := list.pop_front(&hb); node != nil; node = list.pop_front(&hb) {
 			received += 1
 		}
@@ -266,7 +266,7 @@ _test_loop_high_freq_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_K
 	thread.destroy(th)
 
 	// Drain any remaining messages (stall or residual).
-	rb := try_mbox.try_receive_batch(m)
+	rb := loop_mbox.try_receive_batch(m)
 	for node := list.pop_front(&rb); node != nil; node = list.pop_front(&rb) {
 		received += 1
 	}
@@ -298,12 +298,12 @@ _test_loop_double_close :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
-	_, was_open1 := try_mbox.close(m)
-	_, was_open2 := try_mbox.close(m)
+	_, was_open1 := loop_mbox.close(m)
+	_, was_open2 := loop_mbox.close(m)
 
 	testing.expect(t, was_open1, "first close should return was_open=true")
 	testing.expect(t, !was_open2, "second close should return was_open=false")

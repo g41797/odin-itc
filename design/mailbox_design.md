@@ -338,7 +338,7 @@ Blocking mailbox send. Used by worker threads.
 - Mailbox closed → returns false. `msg^` is **not** changed (see Closed Mailbox below).
 - Success → `msg^ = nil`, returns true. Wakes one waiting receiver.
 
-**`try_mbox.send(m, msg: ^Maybe(^T)) -> bool`**
+**`loop_mbox.send(m, msg: ^Maybe(^T)) -> bool`**
 
 Non-blocking mailbox send. Used by producers sending to an nbio loop.
 Delegates directly to `mpsc.push`. Same semantics as `mbox.send`.
@@ -374,7 +374,7 @@ if !accepted {
 
 ### The Closed Mailbox Path
 
-`mbox.send` and `try_mbox.send` return false when the mailbox is closed.
+`mbox.send` and `loop_mbox.send` return false when the mailbox is closed.
 In this case, `msg^` is left unchanged.
 
 This is intentional. `send` has no allocator reference.
@@ -420,7 +420,7 @@ ok := mbox.send(&mb, &msg)
   ok == false → msg is still non-nil, send failed (closed)
                 → pool.destroy_msg(&p, &msg)   free and nil
 
-ok := try_mbox.send(m, &msg)     → same as above
+ok := loop_mbox.send(m, &msg)     → same as above
 
 foreign, ok := pool.put(&p, &msg)
   ok == true  → msg is nil, pool recycled or freed the message
@@ -435,7 +435,7 @@ pool.destroy_msg(&p, &msg)       → msg is nil, message freed
 These functions return a message to the caller. Ownership goes the other way.
 
 - `mbox.wait_receive` — gives `^T` to caller.
-- `try_mbox.try_receive_batch` — gives `list.List` to caller.
+- `loop_mbox.try_receive_batch` — gives `list.List` to caller.
 - `pool.get` — gives `^T` to caller.
 - `mbox.close` — gives `list.List` to caller.
 - `mbox.interrupt` — no message involved.
@@ -519,7 +519,7 @@ The pattern uses ^Maybe(^T) (Odin's equivalent of Zig's *?*T) to make thread own
   - mbox.send on closed mailbox → returns false, msg^ unchanged (caller still owns it, must free)
   - Only correct Odin syntax is ^Maybe(^T) — ?^T and ^?^T are invalid
 
-  Four affected functions: mpsc.push, mbox.send, try_mbox.send, pool.put
+  Four affected functions: mpsc.push, mbox.send, loop_mbox.send, pool.put
 
   One exception: pool.put returns (^T, bool) — if message is "foreign" (different allocator), it zeroes msg^ but returns the raw pointer so caller
   can free it with the right allocator.
@@ -537,7 +537,7 @@ The pattern uses ^Maybe(^T) (Odin's equivalent of Zig's *?*T) to make thread own
 |---|---|---|---|
 | `mpsc.push` | `if msg^ == nil { return false }` | `false` | unchanged (nil) |
 | `mbox.send` | `if msg^ == nil { return false }` | `false` | unchanged (nil) |
-| `try_mbox.send` | `if msg^ == nil { return false }` | `false` | unchanged (nil) |
+| `loop_mbox.send` | `if msg^ == nil { return false }` | `false` | unchanged (nil) |
 | `pool.put` | `if msg^ == nil { return nil, true }` | `(nil, true)` | unchanged (nil) |
 
 ---
@@ -549,15 +549,15 @@ The pattern uses ^Maybe(^T) (Odin's equivalent of Zig's *?*T) to make thread own
 | `mpsc.push` | non-nil (always succeeds) | `true` | `nil` |
 | `mbox.send` | closed | `false` | unchanged (caller retains ownership) |
 | `mbox.send` | success | `true` | `nil` |
-| `try_mbox.send` | closed | `false` | unchanged (caller retains ownership) |
-| `try_mbox.send` | success | `true` | `nil` |
+| `loop_mbox.send` | closed | `false` | unchanged (caller retains ownership) |
+| `loop_mbox.send` | success | `true` | `nil` |
 | `pool.put` | foreign message (allocator differs) | `(ptr, false)` | `nil` — caller must free returned `ptr` |
 | `pool.put` | own message, pool closed or full | `(nil, true)` | `nil` — pool freed it internally |
 | `pool.put` | own message, pool active | `(nil, true)` | `nil` — recycled to free-list |
 
 Key observations:
 - `mpsc.push` has only one non-nil outcome — it always succeeds.
-- `mbox.send` and `try_mbox.send` are symmetric: closed leaves `msg^` intact, success nils it.
+- `mbox.send` and `loop_mbox.send` are symmetric: closed leaves `msg^` intact, success nils it.
 - `pool.put` has three outcomes, all nil `msg^`, but only the foreign case requires caller action (free the returned pointer).
 
 ---
@@ -987,6 +987,8 @@ They work together. One message object travels the full cycle.
 ---
 
 ## Idioms
+
+See also: [design/idioms.md](idioms.md) — quick reference with grep tags.
 
 Collected patterns and advice. Each has come up across the design.
 

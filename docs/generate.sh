@@ -15,7 +15,7 @@ rm -rf build
 mkdir build
 
 # Generate intermediate binary format for our project
-odin doc ../mbox ../mpsc ../pool ../wakeup ../try_mbox ../nbio_mbox ../examples -all-packages -doc-format -out:odin-itc.odin-doc
+odin doc ../mbox ../mpsc ../pool ../wakeup ../loop_mbox ../nbio_mbox ../examples -all-packages -doc-format -out:odin-itc.odin-doc
 
 # Create a temporary config with absolute paths
 sed "s|PROJECT_ROOT|$ROOT_DIR|g" odin-doc.json > build/odin-doc.json

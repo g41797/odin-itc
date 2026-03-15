@@ -75,25 +75,25 @@ for %%o in (%OPTS%) do (
         exit /b !errorlevel!
     )
 
-    echo   build try_mbox lib...
+    echo   build loop_mbox lib...
     if "%%o"=="none" (
-        odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
+        odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
     ) else (
-        odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:%%o
+        odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:%%o
     )
     if !errorlevel! neq 0 (
-        echo [ERROR] try_mbox build failed for -o:%%o
+        echo [ERROR] loop_mbox build failed for -o:%%o
         exit /b !errorlevel!
     )
 
-    echo   test try_mbox/...
+    echo   test loop_mbox/...
     if "%%o"=="none" (
-        odin test ./try_mbox/ -vet -strict-style -disallow-do -o:none -debug
+        odin test ./loop_mbox/ -vet -strict-style -disallow-do -o:none -debug
     ) else (
-        odin test ./try_mbox/ -vet -strict-style -disallow-do -o:%%o
+        odin test ./loop_mbox/ -vet -strict-style -disallow-do -o:%%o
     )
     if !errorlevel! neq 0 (
-        echo [ERROR] try_mbox tests failed for -o:%%o
+        echo [ERROR] loop_mbox tests failed for -o:%%o
         exit /b !errorlevel!
     )
 
@@ -187,8 +187,8 @@ odin doc ./mpsc/
 if !errorlevel! neq 0 ( echo [ERROR] doc failed for mpsc & exit /b !errorlevel! )
 odin doc ./wakeup/
 if !errorlevel! neq 0 ( echo [ERROR] doc failed for wakeup & exit /b !errorlevel! )
-odin doc ./try_mbox/
-if !errorlevel! neq 0 ( echo [ERROR] doc failed for try_mbox & exit /b !errorlevel! )
+odin doc ./loop_mbox/
+if !errorlevel! neq 0 ( echo [ERROR] doc failed for loop_mbox & exit /b !errorlevel! )
 odin doc ./nbio_mbox/
 if !errorlevel! neq 0 ( echo [ERROR] doc failed for nbio_mbox & exit /b !errorlevel! )
 odin doc ./pool/

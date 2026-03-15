@@ -3,7 +3,7 @@
 
 package nbio_mbox
 
-import try_mbox "../try_mbox"
+import loop_mbox "../loop_mbox"
 import wakeup "../wakeup"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
@@ -253,7 +253,7 @@ _init_udp_wakeup :: proc(
 // Public API
 // ---------------------------------------------------------------------------
 
-// init_nbio_mbox allocates a try_mbox.Mbox wired to the nbio event loop.
+// init_nbio_mbox allocates a loop_mbox.Mbox wired to the nbio event loop.
 //
 // kind selects the wake mechanism (default: .UDP).
 // Use .Timeout if UDP sockets are unavailable or on Windows where IOCP
@@ -277,7 +277,7 @@ init_nbio_mbox :: proc(
 	kind := Nbio_Wakeuper_Kind.UDP,
 	allocator := context.allocator,
 ) -> (
-	^try_mbox.Mbox(T),
+	^loop_mbox.Mbox(T),
 	Nbio_Mailbox_Error,
 ) where intrinsics.type_has_field(T, "node"),
 	intrinsics.type_field_type(T, "node") ==
@@ -302,7 +302,7 @@ init_nbio_mbox :: proc(
 		}
 	}
 
-	m := try_mbox.init(T, waker, allocator)
+	m := loop_mbox.init(T, waker, allocator)
 	if m == nil {
 		waker.close(waker.ctx)
 		return nil, .Keepalive_Failed

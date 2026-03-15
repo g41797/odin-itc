@@ -16,6 +16,8 @@ Basic requirement:
 		data: int,
 	}
 
+Idiom reference: design/idioms.md
+
 Typical usage:
 
 	mb: mbox.Mailbox(My_Msg)

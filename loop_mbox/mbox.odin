@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-package try_mbox
+package loop_mbox
 
 import "base:intrinsics"
 import list "core:container/intrusive/list"

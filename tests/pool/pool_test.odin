@@ -126,8 +126,8 @@ test_pool_put_and_get :: proc(t: ^testing.T) {
 		return
 	}
 	orig.data = 42
-	orig_opt: Maybe(^Test_Msg) = orig
-	pool_pkg.put(&p, &orig_opt)
+	orig_opt: Maybe(^Test_Msg) = orig // [itc: maybe-container]
+	pool_pkg.put(&p, &orig_opt) // [itc: defer-put]
 
 	got, _ := pool_pkg.get(&p)
 	testing.expect(t, got != nil, "get after put should return non-nil")

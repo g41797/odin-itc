@@ -5,7 +5,7 @@
 package nbio_mbox_tests
 
 import nbio_mbox "../../nbio_mbox"
-import try_mbox "../../try_mbox"
+import loop_mbox "../../loop_mbox"
 import examples "../../examples"
 import list "core:container/intrusive/list"
 import "core:nbio"
@@ -34,17 +34,17 @@ test_nbio_mbox_timeout_kind :: proc(t: ^testing.T) {
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msg: Maybe(^examples.Msg) = new(examples.Msg)
 	msg.?.data = 11
-	try_mbox.send(m, &msg)
+	loop_mbox.send(m, &msg)
 
 	nbio.tick(10 * time.Millisecond)
 
-	b1 := try_mbox.try_receive_batch(m)
+	b1 := loop_mbox.try_receive_batch(m)
 	got := (^examples.Msg)(list.pop_front(&b1))
 	testing.expect(t, got != nil && got.data == 11, "should receive the sent message")
 	if got != nil {
@@ -66,18 +66,18 @@ test_nbio_mbox_udp_kind :: proc(t: ^testing.T) {
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msg: Maybe(^examples.Msg) = new(examples.Msg)
 	msg.?.data = 22
-	try_mbox.send(m, &msg)
+	loop_mbox.send(m, &msg)
 
 	// tick lets the UDP recv callback fire and re-arm.
 	nbio.tick(10 * time.Millisecond)
 
-	b2 := try_mbox.try_receive_batch(m)
+	b2 := loop_mbox.try_receive_batch(m)
 	got := (^examples.Msg)(list.pop_front(&b2))
 	testing.expect(t, got != nil && got.data == 22, "should receive the sent message")
 	if got != nil {
@@ -100,16 +100,16 @@ test_nbio_mbox_udp_default_kind :: proc(t: ^testing.T) {
 		return
 	}
 	defer {
-		try_mbox.close(m)
-		try_mbox.destroy(m)
+		loop_mbox.close(m)
+		loop_mbox.destroy(m)
 	}
 
 	msg: Maybe(^examples.Msg) = new(examples.Msg)
 	msg.?.data = 33
-	try_mbox.send(m, &msg)
+	loop_mbox.send(m, &msg)
 	nbio.tick(10 * time.Millisecond)
 
-	b3 := try_mbox.try_receive_batch(m)
+	b3 := loop_mbox.try_receive_batch(m)
 	got := (^examples.Msg)(list.pop_front(&b3))
 	testing.expect(t, got != nil && got.data == 33, "should receive the sent message")
 	if got != nil {

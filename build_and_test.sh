@@ -61,11 +61,11 @@ for opt in "${OPTS[@]}"; do
         odin test ./wakeup/ -vet -strict-style -disallow-do -o:"${opt}"
     fi
 
-    echo "  build try_mbox lib..."
+    echo "  build loop_mbox lib..."
     if [ "${opt}" = "none" ]; then
-        odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
+        odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
     else
-        odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:"${opt}"
+        odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:"${opt}"
     fi
 
     echo "  build nbio_mbox lib..."
@@ -103,11 +103,11 @@ for opt in "${OPTS[@]}"; do
         odin test ./tests/mbox/ -vet -strict-style -disallow-do -o:"${opt}"
     fi
 
-    echo "  test tests/try_mbox/..."
+    echo "  test tests/loop_mbox/..."
     if [ "${opt}" = "none" ]; then
-        odin test ./tests/try_mbox/ -vet -strict-style -disallow-do -o:none -debug
+        odin test ./tests/loop_mbox/ -vet -strict-style -disallow-do -o:none -debug
     else
-        odin test ./tests/try_mbox/ -vet -strict-style -disallow-do -o:"${opt}"
+        odin test ./tests/loop_mbox/ -vet -strict-style -disallow-do -o:"${opt}"
     fi
 
     echo "  test tests/nbio_mbox/..."
@@ -133,7 +133,7 @@ odin doc ./
 odin doc ./mbox/
 odin doc ./mpsc/
 odin doc ./wakeup/
-odin doc ./try_mbox/
+odin doc ./loop_mbox/
 odin doc ./nbio_mbox/
 odin doc ./pool/
 odin doc ./examples/

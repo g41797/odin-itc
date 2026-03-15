@@ -55,3 +55,8 @@ test_master_example :: proc(t: ^testing.T) {
 test_pool_wait :: proc(t: ^testing.T) {
 	testing.expect(t, examples.pool_wait_example(), "pool_wait_example failed")
 }
+
+@(test)
+test_echo_server :: proc(t: ^testing.T) {
+	testing.expect(t, examples.echo_server_example(), "echo_server_example failed")
+}

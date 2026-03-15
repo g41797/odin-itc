@@ -80,13 +80,13 @@ jobs:
             odin test ./wakeup/ -vet -strict-style -disallow-do -o:${{ matrix.opt }}
           fi
 
-      - name: Build try_mbox lib
+      - name: Build loop_mbox lib
         shell: bash
         run: |
           if [ "${{ matrix.opt }}" = "none" ]; then
-            odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
+            odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:none -debug
           else
-            odin build ./try_mbox/ -build-mode:lib -vet -strict-style -o:${{ matrix.opt }}
+            odin build ./loop_mbox/ -build-mode:lib -vet -strict-style -o:${{ matrix.opt }}
           fi
 
       - name: Build nbio_mbox lib
@@ -134,13 +134,13 @@ jobs:
             odin test ./tests/mbox/ -vet -strict-style -disallow-do -o:${{ matrix.opt }}
           fi
 
-      - name: Test tests/try_mbox
+      - name: Test tests/loop_mbox
         shell: bash
         run: |
           if [ "${{ matrix.opt }}" = "none" ]; then
-            odin test ./tests/try_mbox/ -vet -strict-style -disallow-do -o:none -debug
+            odin test ./tests/loop_mbox/ -vet -strict-style -disallow-do -o:none -debug
           else
-            odin test ./tests/try_mbox/ -vet -strict-style -disallow-do -o:${{ matrix.opt }}
+            odin test ./tests/loop_mbox/ -vet -strict-style -disallow-do -o:${{ matrix.opt }}
           fi
 
       - name: Test tests/nbio_mbox
@@ -168,7 +168,7 @@ jobs:
           odin doc ./mbox/
           odin doc ./mpsc/
           odin doc ./wakeup/
-          odin doc ./try_mbox/
+          odin doc ./loop_mbox/
           odin doc ./nbio_mbox/
           odin doc ./pool/
           odin doc ./examples/
@@ -183,7 +183,7 @@ jobs:
           odin doc ./mbox/       > doc-out/mbox_pkg.txt
           odin doc ./mpsc/       > doc-out/mpsc.txt
           odin doc ./wakeup/     > doc-out/wakeup.txt
-          odin doc ./try_mbox/   > doc-out/try_mbox.txt
+          odin doc ./loop_mbox/   > doc-out/loop_mbox.txt
           odin doc ./nbio_mbox/  > doc-out/nbio_mbox.txt
           odin doc ./pool/       > doc-out/pool.txt
           odin doc ./examples/   > doc-out/examples.txt

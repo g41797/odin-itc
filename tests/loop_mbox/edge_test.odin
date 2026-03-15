@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 //+test
-package try_mbox_tests
+package loop_mbox_tests
 
-import try_mbox "../../try_mbox"
+import loop_mbox "../../loop_mbox"
 import examples "../../examples"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
@@ -21,22 +21,22 @@ N_CS_SENDS   :: 200
 
 // _Slab_Ctx holds state for one producer thread in test_concurrent_producers.
 _Slab_Ctx :: struct {
-	m:     ^try_mbox.Mbox(examples.Msg),
+	m:     ^loop_mbox.Mbox(examples.Msg),
 	slab:  []examples.Msg,
 	start: ^sync.Sema,
 }
 
 // _Send_Ctx holds state for one sender thread in test_close_during_send_race.
 _Send_Ctx :: struct {
-	m:    ^try_mbox.Mbox(examples.Msg),
+	m:    ^loop_mbox.Mbox(examples.Msg),
 	slab: []examples.Msg,
 	sent: int, // updated atomically
 }
 
 @(test)
 test_concurrent_producers :: proc(t: ^testing.T) {
-	m := try_mbox.init(examples.Msg)
-	defer {_, _ = try_mbox.close(m); try_mbox.destroy(m)}
+	m := loop_mbox.init(examples.Msg)
+	defer {_, _ = loop_mbox.close(m); loop_mbox.destroy(m)}
 
 	// Allocate message slabs — one per thread so each thread owns its messages.
 	slabs := make([][]examples.Msg, N_EP_THREADS)
@@ -65,7 +65,7 @@ test_concurrent_producers :: proc(t: ^testing.T) {
 			sync.sema_wait(c.start)
 			for i in 0 ..< len(c.slab) {
 				msg_opt: Maybe(^examples.Msg) = &c.slab[i]
-				try_mbox.send(c.m, &msg_opt)
+				loop_mbox.send(c.m, &msg_opt)
 			}
 		})
 	}
@@ -77,7 +77,7 @@ test_concurrent_producers :: proc(t: ^testing.T) {
 
 	received := 0
 	for received < N_EP_TOTAL {
-		batch := try_mbox.try_receive_batch(m)
+		batch := loop_mbox.try_receive_batch(m)
 		for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
 			received += 1
 		}
@@ -89,13 +89,13 @@ test_concurrent_producers :: proc(t: ^testing.T) {
 	}
 
 	testing.expect(t, received == N_EP_TOTAL, "should receive all 10,000 messages")
-	testing.expect(t, try_mbox.length(m) == 0, "queue should be empty after draining")
+	testing.expect(t, loop_mbox.length(m) == 0, "queue should be empty after draining")
 }
 
 @(test)
 test_close_during_send_race :: proc(t: ^testing.T) {
-	m := try_mbox.init(examples.Msg)
-	defer try_mbox.destroy(m)
+	m := loop_mbox.init(examples.Msg)
+	defer loop_mbox.destroy(m)
 
 	// Allocate message slabs.
 	slabs := make([][]examples.Msg, N_CS_THREADS)
@@ -118,7 +118,7 @@ test_close_during_send_race :: proc(t: ^testing.T) {
 			c := (^_Send_Ctx)(data)
 			for i in 0 ..< len(c.slab) {
 				msg_opt: Maybe(^examples.Msg) = &c.slab[i]
-				ok := try_mbox.send(c.m, &msg_opt)
+				ok := loop_mbox.send(c.m, &msg_opt)
 				if ok {
 					intrinsics.atomic_add(&c.sent, 1)
 				}
@@ -127,7 +127,7 @@ test_close_during_send_race :: proc(t: ^testing.T) {
 	}
 
 	// Close while senders may still be running.
-	remaining, was_open := try_mbox.close(m)
+	remaining, was_open := loop_mbox.close(m)
 	testing.expect(t, was_open, "first close should return was_open=true")
 
 	// Drain the remaining list from close.
@@ -146,7 +146,7 @@ test_close_during_send_race :: proc(t: ^testing.T) {
 	// After close, send must return false.
 	dummy := examples.Msg{data = -1}
 	dummy_opt: Maybe(^examples.Msg) = &dummy
-	ok := try_mbox.send(m, &dummy_opt)
+	ok := loop_mbox.send(m, &dummy_opt)
 	testing.expect(t, !ok, "send after close should return false")
 
 	// Accepted count must not exceed total attempted.
