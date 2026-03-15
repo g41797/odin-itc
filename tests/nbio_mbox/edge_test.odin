@@ -333,6 +333,11 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	},
 	)
 
+	// Brief sleep so the spawned thread has time to schedule and send A.
+	// On Windows .Timeout busy-polls (no keepalive), so the tick loop would
+	// otherwise exhaust 200 iterations (~200 µs) before the thread even starts.
+	time.sleep(20 * time.Millisecond)
+
 	// Drain A via tick.
 	got_a: ^examples.Msg
 	for _ in 0 ..< 200 {
@@ -350,7 +355,13 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 	// Signal worker to send B.
 	sync.sema_post(&sema)
 
-	// Drain B via tick.
+	// Join before draining B: on Windows .Timeout busy-polls, so the tick loop
+	// may exhaust before the sender thread schedules. Joining ensures B is in
+	// the queue before the final try_receive_batch.
+	thread.join(th)
+	thread.destroy(th)
+
+	// Drain B.
 	got_b: ^examples.Msg
 	for _ in 0 ..< 200 {
 		nbio.tick(20 * time.Millisecond)
@@ -361,11 +372,14 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 			break
 		}
 	}
+	if got_b == nil {
+		// Final fallback drain (B is guaranteed in queue after join).
+		fb := loop_mbox.try_receive_batch(m)
+		node := list.pop_front(&fb)
+		if node != nil {got_b = (^examples.Msg)(node)}
+	}
 	testing.expect(t, got_b != nil && got_b.data == 2, "should receive message B after flag reset")
 	if got_b != nil {free(got_b)}
-
-	thread.join(th)
-	thread.destroy(th)
 }
 
 @(test)

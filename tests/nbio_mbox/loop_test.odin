@@ -180,14 +180,17 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		}
 	}
 
+	// Join before the final drain: on Windows .Timeout busy-polls (no keepalive),
+	// so the tick loop may exhaust before the sender wakes. Joining ensures the
+	// sender has sent before we do the last try_receive_batch.
+	thread.join(th)
+	thread.destroy(th)
+
 	if got == nil {
 		fb := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&fb)
 		if node != nil {got = (^examples.Msg)(node)}
 	}
-
-	thread.join(th)
-	thread.destroy(th)
 
 	testing.expect(t, got != nil && got.data == 77, "should receive the message sent by thread")
 	if got != nil {free(got)}

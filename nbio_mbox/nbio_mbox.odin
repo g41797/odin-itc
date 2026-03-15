@@ -21,7 +21,8 @@ _NBioDuration :: time.Duration
 _NBioWaker :: wakeup.WakeUper
 
 // Nbio_Wakeuper_Kind selects the mechanism used to wake the nbio event loop.
-//   .Timeout — nbio.wake_up (APC/signal); tick busy-polls when no ops are outstanding
+//   .Timeout — nbio.wake_up (APC/signal); blocks via keepalive timer on non-Windows,
+//              busy-polls on Windows (keepalive omitted due to AVL-tree crash)
 //   .UDP     — loopback UDP socket; sender writes 1 byte, nbio wakes on receipt (default)
 Nbio_Wakeuper_Kind :: enum {
 	Timeout,
@@ -41,16 +42,27 @@ Nbio_Mailbox_Error :: enum {
 // ---------------------------------------------------------------------------
 
 // _NBio_State holds the nbio event loop pointer for one nbio_mbox instance.
-// The .Timeout variant uses nbio.wake_up to signal the event loop. Because
-// no keepalive operation is registered, nbio.tick returns immediately when
-// the pool has no outstanding operations; the consumer loop busy-polls
-// try_receive_batch between tick calls. This is correct on all platforms and
-// avoids all cross-thread nbio operation machinery that is problematic on Windows.
+// The .Timeout variant uses nbio.wake_up to signal the event loop.
+//
+// On non-Windows platforms a 24-hour keepalive timeout is registered so that
+// nbio.tick() blocks until the wake signal fires (pool.num_outstanding > 0).
+//
+// On Windows the keepalive is omitted: avl.find_or_insert inside timeout_exec
+// crashes under aggressive optimisation. Without the keepalive, tick() returns
+// immediately when no other operations are outstanding, so the consumer loop
+// busy-polls try_receive_batch between tick calls. This is safe and correct;
+// tests must join the sender thread before the final drain on Windows.
 @(private)
 _NBio_State :: struct {
 	loop:      ^nbio.Event_Loop,
 	allocator: mem.Allocator,
 }
+
+// _noop_keepalive is the callback for the 24-hour keepalive timer.
+// It intentionally does nothing; the timer exists only to keep
+// pool.num_outstanding > 0 so nbio.tick() actually blocks.
+@(private)
+_noop_keepalive :: proc(_: ^nbio.Operation) {}
 
 // _nbio_wake wakes the nbio event loop via nbio.wake_up.
 // Uses QueueUserAPC on Windows — no cross-thread operation allocation.
@@ -89,6 +101,12 @@ _init_timeout_wakeup :: proc(
 	}
 	state.loop = loop
 	state.allocator = allocator
+	// Register a keepalive timer so tick() actually blocks (pool.num_outstanding > 0).
+	// Skipped on Windows: avl.find_or_insert in timeout_exec crashes under aggressive
+	// optimisation. On Windows the loop busy-polls instead (see _NBio_State comment).
+	when ODIN_OS != .Windows {
+		nbio.timeout(24 * time.Hour, _noop_keepalive, loop)
+	}
 	return wakeup.WakeUper{ctx = rawptr(state), wake = _nbio_wake, close = _nbio_close}, true
 }
 
@@ -136,21 +154,25 @@ _udp_recv_cb :: proc(op: ^nbio.Operation, state: ^_UDP_State) {
 // _udp_close cancels the pending recv, closes both sockets, and frees state.
 // Must be called from the event-loop thread — nbio.remove panics cross-thread.
 //
-// Shutdown order on Windows (IOCP):
+// The close/remove order is platform-specific:
+//
+// Windows (IOCP):
 //   CancelIoEx (via nbio.remove) is asynchronous: it posts a STATUS_CANCELLED
 //   completion to the IOCP but does not wait for it. If recv_sock is still open
 //   when nbio.tick(0) runs, that completion may not have arrived yet, so tick(0)
 //   returns without processing it. The stale completion then fires during a
 //   subsequent tick call — after state has been freed — and recv_callback reads
 //   op.recv._impl.bufs[0].data, which points into the freed state.recv_buf: UAF.
-//
 //   Fix: close recv_sock BEFORE nbio.remove. Closing the socket forces the pending
 //   WSARecvFrom to complete immediately with an error. The IOCP completion is
 //   queued synchronously, so the following tick(0) reliably drains it before
-//   state is freed. No dangling buffer pointer survives into the next tick.
+//   state is freed.
 //
-// On Linux/macOS, nbio.remove is silent (callback never fires) and tick(0) is
-// a no-op, so the order of close and remove does not matter there.
+// POSIX/kqueue (Linux, macOS):
+//   Closing an fd auto-removes its kqueue filters. Calling nbio.remove afterward
+//   issues kevent(EV_DELETE) on an already-removed filter → ENOENT → assertion
+//   at impl_posix.odin:529. Fix: call nbio.remove BEFORE net.close so the filter
+//   is removed explicitly while the fd is still open.
 @(private)
 _udp_close :: proc(ctx: rawptr) {
 	if ctx == nil {
@@ -158,14 +180,24 @@ _udp_close :: proc(ctx: rawptr) {
 	}
 	state := (^_UDP_State)(ctx)
 	intrinsics.atomic_store(&state.closed, true)
-	// Close recv_sock first so the pending WSARecvFrom completes immediately;
-	// tick(0) then reliably drains the IOCP completion before state is freed.
-	net.close(state.recv_sock)
-	if state.recv_op != nil {
-		nbio.remove(state.recv_op)
-		state.recv_op = nil
+	when ODIN_OS == .Windows {
+		// Close recv_sock first so the pending WSARecvFrom completes immediately;
+		// tick(0) then reliably drains the IOCP completion before state is freed.
+		net.close(state.recv_sock)
+		if state.recv_op != nil {
+			nbio.remove(state.recv_op)
+			state.recv_op = nil
+		}
+		nbio.tick(0) // drain IOCP completion before freeing state.recv_buf
+	} else {
+		// Remove before close: kqueue auto-removes events on fd close, so
+		// nbio.remove must run first to avoid EV_DELETE on a stale filter.
+		if state.recv_op != nil {
+			nbio.remove(state.recv_op)
+			state.recv_op = nil
+		}
+		net.close(state.recv_sock)
 	}
-	nbio.tick(0) // drain IOCP completion before freeing state.recv_buf
 	net.close(state.send_sock)
 	free(state, state.allocator)
 }
