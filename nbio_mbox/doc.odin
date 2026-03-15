@@ -1,5 +1,9 @@
 /*
-Package nbio_mbox provides a non-blocking mailbox for nbio event loops.
+Package nbio_mbox — concept implementation (experimental).
+
+nbio_mbox is a concept implementation showing how odin-itc can be injected into a foreign
+event loop (core:nbio). Tests run on Linux only — the implementation is not production-ready
+and is not intended to be. For production use, wire your own wakeup via the WakeUper interface.
 
 It wraps loop_mbox.Mbox with a wakeup mechanism that signals the nbio event loop
 when a message is sent from another thread.
@@ -7,10 +11,10 @@ when a message is sent from another thread.
 Two wake mechanisms are available via Nbio_Wakeuper_Kind:
 
   .UDP (default) — A loopback UDP socket. The sender writes 1 byte; nbio wakes on receipt.
-      No queue capacity limit.
 
-  .Timeout — A zero-duration nbio timeout. Works on all platforms.
-      Throttled with a CAS flag to prevent 128-slot cross-thread queue overflow.
+  .Timeout — Uses nbio.wake_up to signal the event loop. On non-Windows, a 24-hour
+      keepalive timer keeps tick() blocking. On Windows, tick() busy-polls (keepalive
+      omitted — avl.find_or_insert crashes under aggressive optimisation).
 
 Thread model:
 

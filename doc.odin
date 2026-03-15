@@ -4,7 +4,7 @@ Package mbox is an inter-thread communication library for Odin.
 Sub-packages:
 
   mbox/       — Mailbox($T): blocking worker-thread mailbox (condition variable)
-  nbio_mbox/  — init_nbio_mbox: non-blocking nbio event-loop mailbox (UDP or timeout wakeup)
+  nbio_mbox/  — init_nbio_mbox: nbio event-loop mailbox, concept implementation (Linux tests only)
   loop_mbox/  — Mbox($T): non-blocking MPSC mailbox (used by nbio_mbox internally)
   mpsc/       — Lock-free multi-producer single-consumer queue
   wakeup/     — WakeUper interface + semaphore-backed implementation

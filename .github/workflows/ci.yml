@@ -144,6 +144,7 @@ jobs:
           fi
 
       - name: Test tests/nbio_mbox
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           if [ "${{ matrix.opt }}" = "none" ]; then

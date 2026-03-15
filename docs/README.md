@@ -64,9 +64,15 @@ My_Msg :: struct {
 ## Two mailbox types
 
 - **Mailbox($T)**: For worker threads. Blocks the thread until a message arrives.
-- **loop_mbox.Mbox($T)**: For nbio loops. Wakes the loop. Never blocks the thread. Created by `init_nbio_mbox`.
+- **loop_mbox.Mbox($T)**: For nbio loops. Wakes the loop. Never blocks the thread. Created by `nbio_mbox.init_nbio_mbox`. See **nbio_mbox note** below.
 
 Both are thread-safe. Both have zero allocations for sending or receiving.
+
+### nbio_mbox note
+
+nbio_mbox is a concept implementation. It shows how odin-itc can be injected into a foreign
+event loop (`core:nbio`). Tests run on Linux only. Not production-ready. Not intended to be.
+For production use, wire your own wakeup via the `WakeUper` interface.
 
 ---
 
