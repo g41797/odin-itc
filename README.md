@@ -246,11 +246,19 @@ My_Msg :: struct {
     data:      int,
 }
 
-// Setup:
+// Setup — plain message type:
 p: pool_pkg.Pool(My_Msg)
-if ok, _ := pool_pkg.init(&p, initial_msgs = 64, max_msgs = 256, reset = nil); !ok {
+if ok, _ := pool_pkg.init(&p, initial_msgs = 64, max_msgs = 256, procs = nil); !ok {
     return
 }
+
+// Setup — message with internal heap resources (T_Procs):
+// pool_pkg.init(&p, initial_msgs = 4, max_msgs = 0,
+//     procs = &pool_pkg.T_Procs(My_Msg){
+//         factory = my_factory, // nil = new(T, allocator)
+//         reset   = my_reset,   // nil = no-op
+//         dispose = my_dispose, // nil = free(msg, allocator)
+//     })
 
 // Sender: get from pool, fill, send.
 // .Always (default): allocates new if pool empty.

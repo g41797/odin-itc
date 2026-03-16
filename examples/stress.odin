@@ -24,7 +24,8 @@ create_stress_consumer :: proc(n: int) -> (c: ^_Stress_Consumer, ok: bool) {
 	c_opt: Maybe(^_Stress_Consumer) = raw
 	defer if !ok { _stress_consumer_dispose(&c_opt) }
 
-	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = n, max_msgs = n, reset = disposable_reset)
+	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = n, max_msgs = n,
+		procs = &pool_pkg.T_Procs(DisposableMsg){ reset = disposable_reset })
 	if !init_ok { return }
 
 	c = raw

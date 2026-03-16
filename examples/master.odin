@@ -23,7 +23,8 @@ create_master :: proc(initial_msgs: int, max_msgs: int) -> (m: ^Master, ok: bool
 	// if post-init setup fails, dispose cleans up the partially-init master.
 	defer if !ok { master_dispose(&m_opt) }
 
-	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = initial_msgs, max_msgs = max_msgs, reset = disposable_reset)
+	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = initial_msgs, max_msgs = max_msgs,
+		procs = &pool_pkg.T_Procs(DisposableMsg){ reset = disposable_reset })
 	if !init_ok { return }
 
 	// ... potential further setup ...

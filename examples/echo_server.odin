@@ -41,7 +41,7 @@ create_echo_server :: proc(n_msgs: int, n_clients: int) -> (srv: ^_Echo_Server, 
 	srv_opt: Maybe(^_Echo_Server) = raw
 	defer if !ok { _echo_server_dispose(&srv_opt) }
 
-	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = n_msgs, max_msgs = n_msgs, reset = nil)
+	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = n_msgs, max_msgs = n_msgs, procs = nil)
 	if !init_ok { return }
 
 	mpsc.init(&raw.q)

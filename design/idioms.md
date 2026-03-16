@@ -49,16 +49,17 @@ All `loop_mbox` procs work on the returned pointer: `send`, `try_receive_batch`,
 |-----|-------|----------|
 | `maybe-container` | Idiom 1: Maybe as container | Wrap a heap pointer in `Maybe(^T)` before any ownership-transferring call. |
 | `defer-put` | Idiom 2: defer with pool.put | Use `defer pool.put` to return to pool in all paths. |
-| `dispose-contract` | Idiom 3: dispose signature contract | A dispose proc takes `^Maybe(^T)`. Nil inner is a no-op. Sets inner to nil on return. |
+| `dispose-contract` | Idiom 3: dispose signature contract | A dispose proc takes `^Maybe(^T)`. Nil inner is a no-op. Sets inner to nil on return. Register it in `T_Procs.dispose` for pool-managed cleanup. |
 | `defer-dispose` | Idiom 4: defer with dispose | Use `defer dispose(&m)` so cleanup runs in all paths. |
-| `disposable-msg` | Idiom 5: DisposableMsg full lifecycle | Messages with internal heap resources use pool.get, fill, send, receive, pool.put with reset, and a separate dispose for permanent cleanup. |
+| `disposable-msg` | Idiom 5: DisposableMsg full lifecycle | Messages with internal heap resources use pool.get, fill, send, receive, pool.put with reset, and a separate dispose for permanent cleanup. Register factory/reset/dispose in `T_Procs` so the pool calls them automatically. |
 | `foreign-dispose` | Idiom 6: foreign message with resources | When put returns a foreign pointer, call dispose, not free. |
-| `reset-vs-dispose` | Idiom 7: reset vs dispose | reset clears state for reuse. dispose frees internal resources permanently. |
+| `reset-vs-dispose` | Idiom 7: reset vs dispose | reset clears state for reuse. dispose frees internal resources permanently. factory allocates and initializes. All three are optional fields in `T_Procs`. |
 | `dispose-optional` | Idiom 8: dispose is advice | dispose is called by the caller, never by pool or mailbox. |
 | `heap-master` | Idiom 9: ITC participants in a heap-allocated struct | Heap-allocate the struct that owns ITC participants when its address is shared with spawned threads. |
 | `thread-container` | Idiom 10: thread is just a container for its master | A thread proc only casts rawptr to ^Owner. No ITC participants declared as stack locals. |
 | `errdefer-dispose` | Idiom 11: conditional defer for factory procs | Use named return + `defer if !ok { dispose(...) }` when a proc creates and returns a master. |
 | `defer-destroy` | Idiom 12: destroy resources at scope exit | Register `defer destroy` for pools/mboxes/loops to guarantee shutdown in all paths. |
+| `t-procs` | Idiom 13: T_Procs pattern | Register factory/reset/dispose as a table. All optional. nil = default behavior. |
 
 ---
 
@@ -125,6 +126,7 @@ disposable_dispose :: proc(msg: ^Maybe(^DisposableMsg)) {
 - Takes `^Maybe(^T)`. Nil inner is a no-op. Sets inner to nil on return.
 - Frees all internal resources before freeing the struct itself.
 - Must be safe to call after a partial init. All cleanup steps handle zero-initialized fields.
+- Register as `T_Procs.dispose` so the pool calls it on permanent message destruction.
 
 ---
 
@@ -152,9 +154,17 @@ if mbox.send(&mb, &m) { result = true }
 
 **Problem**: Messages with internal heap resources need careful handling through pool + mailbox.
 
-**Fix**: Use `pool.get`, fill, `send`, `receive`, `pool.put` with reset, and a separate `dispose` for permanent cleanup.
+**Fix**: Use `pool.get`, fill, `send`, `receive`, `pool.put` with reset, and a separate `dispose` for permanent cleanup. Register all three in `T_Procs` so the pool manages the lifecycle.
 
 ```odin
+// Setup: register hooks in pool.init
+pool.init(&p, initial_msgs = 4, max_msgs = 0,
+    procs = &pool.T_Procs(DisposableMsg){
+        factory = disposable_factory,
+        reset   = disposable_reset,
+        dispose = disposable_dispose,
+    })
+
 // Producer:
 msg, _ := pool.get(&p)
 msg.name = strings.clone("hello", msg.allocator)
@@ -168,7 +178,7 @@ m2: Maybe(^DisposableMsg) = got
 pool.put(&p, &m2)                     // [itc: reset-vs-dispose]
 ```
 
-**Note**: `reset` clears state for reuse. `dispose` frees internal resources permanently.
+**Note**: `reset` clears state for reuse. `dispose` frees internal resources permanently. `factory` allocates and initializes. All three are optional in `T_Procs`.
 
 ---
 
@@ -194,9 +204,23 @@ if !recycled && ptr != nil {
 
 **Problem**: It is easy to confuse `reset` (for reuse) with `dispose` (for permanent cleanup).
 
-**Fix**: Keep them separate. Never free internal resources in `reset`.
+**Fix**: Keep them separate. Never free internal resources in `reset`. Register all three hooks in `T_Procs`.
+
+| Hook | When called | What it does |
+|------|-------------|--------------|
+| `factory` | Fresh allocation | Allocates struct, sets allocator, inits internal resources |
+| `reset` | Get (recycled) and Put (before free-list) | Clears stale state for reuse. Never frees internal resources |
+| `dispose` | Permanent destruction (destroy, put-when-full) | Frees internal resources, frees struct, sets msg^ = nil |
 
 ```odin
+// factory: alloc + init internal resources.
+disposable_factory :: proc(allocator: mem.Allocator) -> (^DisposableMsg, bool) {
+    msg := new(DisposableMsg, allocator)
+    if msg == nil { return nil, false }
+    msg.allocator = allocator
+    return msg, true
+}
+
 // reset: clears state for reuse.
 // [itc: reset-vs-dispose]
 disposable_reset :: proc(msg: ^DisposableMsg, _: pool.Pool_Event) {
@@ -292,6 +316,29 @@ defer pool.destroy(&p)
 ```
 
 **Why**: Ensures cleanup in early returns and keeps shutdown logic localized.
+
+### Idiom 13: T_Procs pattern — `t-procs`
+
+**Problem**: A message type has internal heap resources. The pool must allocate, reset, and free them correctly. Scattering this logic across call sites leads to leaks.
+
+**Fix**: Register factory/reset/dispose as a table in `T_Procs`. Pass it to `pool.init`. The pool calls the right hook at each lifecycle point.
+
+```odin
+// [itc: t-procs]
+pool.init(&p, initial_msgs = 4, max_msgs = 0,
+    procs = &pool.T_Procs(DisposableMsg){
+        factory = disposable_factory, // fresh alloc — nil = new(T, allocator)
+        reset   = disposable_reset,   // reuse hygiene — nil = no-op
+        dispose = disposable_dispose, // permanent free — nil = free(msg, allocator)
+    })
+```
+
+**Rules**:
+- All three fields are optional. nil = default behavior.
+- `factory` must set `msg.allocator`. Must self-clean on failure. Returns `(nil, false)` on failure.
+- `reset` must NOT free internal resources. Pool calls it outside the mutex.
+- `dispose` must free internal resources, free the struct, set `msg^ = nil`.
+- If you use `factory`, also use `dispose`. They are the create/destroy pair.
 
 ---
 

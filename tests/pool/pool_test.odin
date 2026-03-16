@@ -91,7 +91,7 @@ _test_reset_bits :: proc(msg: ^Test_Msg, e: pool_pkg.Pool_Event) {
 @(test)
 test_pool_get_always :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Empty pool, .Always strategy — must allocate a new message.
@@ -105,7 +105,7 @@ test_pool_get_always :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_pool_only :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Empty pool, .Pool_Only — must return nil.
@@ -116,7 +116,7 @@ test_pool_get_pool_only :: proc(t: ^testing.T) {
 @(test)
 test_pool_put_and_get :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Get a fresh message (sets msg.allocator), put it back, get again.
@@ -141,7 +141,7 @@ test_pool_put_and_get :: proc(t: ^testing.T) {
 @(test)
 test_pool_respects_max :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, max_msgs = 2, reset = nil)
+	pool_pkg.init(&p, max_msgs = 2, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Get 3 messages from pool (sets allocator on each).
@@ -159,7 +159,7 @@ test_pool_respects_max :: proc(t: ^testing.T) {
 @(test)
 test_pool_preinit :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 4, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 4, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	testing.expect(t, p.curr_msgs == 4, "curr_msgs should be 4 after init with initial_msgs=4")
@@ -181,7 +181,7 @@ test_pool_preinit :: proc(t: ^testing.T) {
 @(test)
 test_pool_closed_get :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 
 	// Get a fresh message (sets allocator), put it back into pool.
 	msg, _ := pool_pkg.get(&p)
@@ -197,7 +197,7 @@ test_pool_closed_get :: proc(t: ^testing.T) {
 @(test)
 test_pool_closed_put :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	pool_pkg.destroy(&p) // closed
 
 	// Simulate a pool-owned message by setting allocator manually.
@@ -212,7 +212,7 @@ test_pool_closed_put :: proc(t: ^testing.T) {
 @(test)
 test_pool_nil_put :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	nil_opt: Maybe(^Test_Msg) = nil
@@ -223,7 +223,7 @@ test_pool_nil_put :: proc(t: ^testing.T) {
 @(test)
 test_pool_destroy :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 2, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 2, procs = nil)
 
 	pool_pkg.destroy(&p)
 
@@ -239,7 +239,7 @@ test_pool_destroy :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_status_ok :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 1, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 1, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	msg, status := pool_pkg.get(&p)
@@ -253,7 +253,7 @@ test_pool_get_status_ok :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_status_pool_empty :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil) // empty pool
+	pool_pkg.init(&p, procs = nil) // empty pool
 	defer pool_pkg.destroy(&p)
 
 	msg, status := pool_pkg.get(&p, .Pool_Only)
@@ -264,7 +264,7 @@ test_pool_get_status_pool_empty :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_status_closed :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	pool_pkg.destroy(&p)
 
 	msg, status := pool_pkg.get(&p)
@@ -285,7 +285,7 @@ test_pool_get_status_uninit :: proc(t: ^testing.T) {
 test_pool_get_status_oom :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
 	// init with 0 pre-allocs succeeds even with failing allocator
-	pool_pkg.init(&p, reset = nil, allocator = failing_allocator)
+	pool_pkg.init(&p, procs = nil, allocator = failing_allocator)
 	defer pool_pkg.destroy(&p)
 
 	// .Always on empty pool tries to allocate — fails
@@ -301,7 +301,7 @@ test_pool_get_status_oom :: proc(t: ^testing.T) {
 @(test)
 test_pool_init_oom_immediate :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	ok, status := pool_pkg.init(&p, initial_msgs = 1, reset = nil, allocator = failing_allocator)
+	ok, status := pool_pkg.init(&p, initial_msgs = 1, procs = nil, allocator = failing_allocator)
 	testing.expect(t, !ok, "init should fail")
 	testing.expect(t, status == .Out_Of_Memory, "status should be .Out_Of_Memory")
 	testing.expect(t, p.state == .Closed, "pool should be .Closed after failed init")
@@ -319,7 +319,7 @@ test_pool_init_oom_partial :: proc(t: ^testing.T) {
 	}
 
 	p: pool_pkg.Pool(Test_Msg)
-	ok, status := pool_pkg.init(&p, initial_msgs = 4, reset = nil, allocator = counting)
+	ok, status := pool_pkg.init(&p, initial_msgs = 4, procs = nil, allocator = counting)
 	testing.expect(t, !ok, "init should fail after 2 successes")
 	testing.expect(t, status == .Out_Of_Memory, "status should be .Out_Of_Memory")
 	testing.expect(t, p.state == .Closed, "pool should be .Closed after partial OOM")
@@ -332,7 +332,7 @@ test_pool_init_oom_partial :: proc(t: ^testing.T) {
 @(test)
 test_pool_put_foreign_returned :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// A message whose allocator field is zero (not from this pool's get).
@@ -349,7 +349,7 @@ test_pool_put_foreign_returned :: proc(t: ^testing.T) {
 @(test)
 test_pool_put_own_nil_return :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	msg, _ := pool_pkg.get(&p) // get sets msg.allocator = p.allocator
@@ -371,7 +371,7 @@ test_pool_put_own_nil_return :: proc(t: ^testing.T) {
 test_pool_reset_on_get_recycled :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
 	// Pre-allocate 1 message so first get is from free-list (recycled).
-	pool_pkg.init(&p, initial_msgs = 1, reset = _test_reset_bits)
+	pool_pkg.init(&p, initial_msgs = 1, procs = &pool_pkg.T_Procs(Test_Msg){ reset = _test_reset_bits })
 	defer pool_pkg.destroy(&p)
 
 	msg, _ := pool_pkg.get(&p) // recycled from free-list → reset(.Get) sets bit 0
@@ -386,7 +386,7 @@ test_pool_reset_on_get_recycled :: proc(t: ^testing.T) {
 @(test)
 test_pool_reset_not_on_fresh :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = _test_reset_bits) // empty pool
+	pool_pkg.init(&p, procs = &pool_pkg.T_Procs(Test_Msg){ reset = _test_reset_bits }) // empty pool
 	defer pool_pkg.destroy(&p)
 
 	msg, _ := pool_pkg.get(&p) // fresh allocation — reset must NOT be called
@@ -404,7 +404,7 @@ test_pool_reset_not_on_fresh :: proc(t: ^testing.T) {
 @(test)
 test_pool_reset_on_put :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = _test_reset_bits)
+	pool_pkg.init(&p, procs = &pool_pkg.T_Procs(Test_Msg){ reset = _test_reset_bits })
 	defer pool_pkg.destroy(&p)
 
 	msg, _ := pool_pkg.get(&p) // fresh alloc, no reset → data=0
@@ -434,7 +434,7 @@ test_pool_reset_on_put :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_timeout_zero :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Empty pool, .Pool_Only, timeout=0 — must return immediately with .Pool_Empty.
@@ -458,7 +458,7 @@ test_pool_waker_wakes_on_put :: proc(t: ^testing.T) {
 	}
 
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil, waker = waker)
+	pool_pkg.init(&p, procs = nil, waker = waker)
 	defer pool_pkg.destroy(&p)
 
 	// Non-blocking get on empty pool — sets empty_was_returned.
@@ -486,7 +486,7 @@ test_pool_waker_close_on_destroy :: proc(t: ^testing.T) {
 	}
 
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil, waker = waker)
+	pool_pkg.init(&p, procs = nil, waker = waker)
 
 	pool_pkg.destroy(&p)
 
@@ -502,10 +502,10 @@ test_pool_waker_close_on_destroy :: proc(t: ^testing.T) {
 @(test)
 test_pool_reinit_active :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 3, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 3, procs = nil)
 	defer pool_pkg.destroy(&p)
 
-	ok, status := pool_pkg.init(&p, initial_msgs = 5, reset = nil)
+	ok, status := pool_pkg.init(&p, initial_msgs = 5, procs = nil)
 	testing.expect(t, !ok, "re-init on active pool should fail")
 	testing.expect(t, status == .Closed, "status should be .Closed for re-init on active pool")
 	testing.expect(
@@ -519,7 +519,7 @@ test_pool_reinit_active :: proc(t: ^testing.T) {
 @(test)
 test_pool_length :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 3, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 3, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	testing.expect(t, pool_pkg.length(&p) == 3, "length should be 3 after init with 3 pre-alloc")

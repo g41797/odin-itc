@@ -36,23 +36,33 @@ Status returns:
   - timeout<0: wait forever until put or destroy.
   - timeout>0: wait up to that duration; returns (nil, .Pool_Empty) on expiry.
   - Returns (nil, .Closed) if pool is destroyed while waiting.
-- put returns ^T: nil if recycled or freed. Returns the original pointer if the message is foreign (msg.allocator != pool allocator) — caller must free it.
+- put returns ^T: nil if recycled or freed. Returns the original pointer if the message is foreign (msg.allocator != pool allocator) — caller must free or dispose it.
 
 Lifecycle:
 - Pool_State.Uninit: zero value, init not yet called.
 - Pool_State.Active: pool is running.
 - Pool_State.Closed: destroyed or init failed.
 
-Optional reset proc:
-- Pass a proc(^T, Pool_Event) to init to register a reset hook.
-- Called with .Get when a recycled message is returned from the free-list.
-- Called with .Put before a message is returned to the free-list (or freed).
-- NOT called for fresh allocations.
-- Called outside the pool mutex.
+T_Procs — optional hooks for message lifecycle:
+- Pass a ^T_Procs(T) to init to register hooks. Pass nil to use all defaults.
+- All three fields are optional independently. nil field = default behavior.
+- factory: called for every fresh allocation (pre-alloc in init, .Always path in get).
+  - nil: new(T, allocator) is used. get sets msg.allocator.
+  - not nil: must allocate the struct, initialize internal resources, set msg.allocator.
+  - On failure: must clean up everything itself, return (nil, false).
+- reset: called with .Get when a recycled message is returned from the free-list.
+  - Called with .Put before a message is returned to the free-list (or permanently freed).
+  - nil: no reset (current behavior).
+  - NOT called for fresh allocations.
+  - Called outside the pool mutex.
+- dispose: called instead of free when permanently destroying a message.
+  - Sites: destroy loop, put when pool is full or closed, destroy_msg.
+  - nil: free(msg, allocator) is used.
+  - not nil: must free all internal resources, free the struct itself, set msg^ = nil.
 */
 package pool
 
 /*
-Note: Some test procedures may appear in the generated documentation. 
+Note: Some test procedures may appear in the generated documentation.
 This is because they are part of the same package to allow for white-box testing.
 */

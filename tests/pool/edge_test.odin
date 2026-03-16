@@ -72,7 +72,7 @@ _Idempotent_Ctx :: struct {
 @(test)
 test_pool_get_timeout_elapsed :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Empty pool, .Pool_Only, short timeout — nobody puts, should expire with .Pool_Empty.
@@ -84,7 +84,7 @@ test_pool_get_timeout_elapsed :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_timeout_put_wakes :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	// Pre-allocate a message to put back from the second thread.
@@ -127,7 +127,7 @@ test_pool_get_timeout_put_wakes :: proc(t: ^testing.T) {
 @(test)
 test_pool_get_timeout_destroy_wakes :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 
 	ctx := _Destroy_Wakes_Ctx {
 		pool = &p,
@@ -160,7 +160,7 @@ test_pool_get_timeout_destroy_wakes :: proc(t: ^testing.T) {
 @(test)
 test_pool_many_waiters_partial_fill :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 	defer pool_pkg.destroy(&p)
 
 	N :: 10
@@ -231,7 +231,7 @@ test_pool_many_waiters_partial_fill :: proc(t: ^testing.T) {
 @(test)
 test_pool_destroy_wakes_all :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 
 	N :: 10
 	started: sync.Sema
@@ -288,7 +288,7 @@ test_pool_destroy_wakes_all :: proc(t: ^testing.T) {
 @(test)
 test_pool_stress_high_volume :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 
 	N :: 10
 	start: sync.Sema
@@ -335,7 +335,7 @@ test_pool_stress_high_volume :: proc(t: ^testing.T) {
 @(test)
 test_pool_max_limit_racing :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 3, max_msgs = 3, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 3, max_msgs = 3, procs = nil)
 
 	N :: 10
 	start: sync.Sema
@@ -385,7 +385,7 @@ test_pool_max_limit_racing :: proc(t: ^testing.T) {
 @(test)
 test_pool_shutdown_race :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, reset = nil)
+	pool_pkg.init(&p, procs = nil)
 
 	N :: 5
 	start: sync.Sema
@@ -436,7 +436,7 @@ test_pool_shutdown_race :: proc(t: ^testing.T) {
 @(test)
 test_pool_idempotent_destroy :: proc(t: ^testing.T) {
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 5, reset = nil)
+	pool_pkg.init(&p, initial_msgs = 5, procs = nil)
 
 	N :: 10
 	start: sync.Sema
@@ -481,7 +481,7 @@ test_pool_allocator_integrity :: proc(t: ^testing.T) {
 	}
 
 	p: pool_pkg.Pool(Test_Msg)
-	pool_pkg.init(&p, initial_msgs = 3, reset = nil, allocator = counting)
+	pool_pkg.init(&p, initial_msgs = 3, procs = nil, allocator = counting)
 	// init consumed 3 allocs.
 	testing.expect(t, data.count == 3, "init with 3 pre-alloc should consume 3 allocs")
 

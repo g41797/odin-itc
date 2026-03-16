@@ -29,7 +29,8 @@ create_pool_wait_collector :: proc() -> (c: ^_Pool_Wait_Collector, ok: bool) {
 	c_opt: Maybe(^_Pool_Wait_Collector) = raw
 	defer if !ok { _pool_wait_collector_dispose(&c_opt) }
 
-	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = M_TOKENS, max_msgs = M_TOKENS, reset = disposable_reset)
+	init_ok, _ := pool_pkg.init(&raw.pool, initial_msgs = M_TOKENS, max_msgs = M_TOKENS,
+		procs = &pool_pkg.T_Procs(DisposableMsg){ reset = disposable_reset })
 	if !init_ok { return }
 
 	c = raw

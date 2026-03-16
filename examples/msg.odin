@@ -43,7 +43,7 @@ disposable_reset :: proc(msg: ^DisposableMsg, _: pool_pkg.Pool_Event) {
 
 // disposable_dispose frees all internal resources, then frees the struct.
 // Follows the ^Maybe(^T) contract: nil inner is a no-op. Sets inner to nil on return.
-// Caller uses this for permanent cleanup. Pool and mailbox never call it.
+// Caller uses this for permanent cleanup. Pool calls it via T_Procs.dispose.
 // [itc: dispose-contract]
 disposable_dispose :: proc(msg: ^Maybe(^DisposableMsg)) {
 	if msg^ == nil {return}
@@ -53,4 +53,14 @@ disposable_dispose :: proc(msg: ^Maybe(^DisposableMsg)) {
 	}
 	free(ptr, ptr.allocator)
 	msg^ = nil
+}
+
+// disposable_factory allocates a DisposableMsg and sets its allocator.
+// Internal resources start at zero — valid for DisposableMsg (name = "").
+// On failure: returns (nil, false). Nothing to clean up for a zero-init struct.
+disposable_factory :: proc(allocator: mem.Allocator) -> (^DisposableMsg, bool) {
+	msg := new(DisposableMsg, allocator)
+	if msg == nil {return nil, false}
+	msg.allocator = allocator
+	return msg, true
 }
