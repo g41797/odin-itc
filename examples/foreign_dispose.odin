@@ -26,7 +26,7 @@ foreign_dispose :: proc(msg: ^Maybe(^ForeignMsg)) { // [itc: dispose-contract]
 foreign_dispose_example :: proc() -> bool {
 	p: pool_pkg.Pool(ForeignMsg)
 	pool_pkg.init(&p, initial_msgs = 0, max_msgs = 10, reset = nil)
-	defer pool_pkg.destroy(&p)
+	defer pool_pkg.destroy(&p) // [itc: defer-destroy]
 
 	// Create a message with a DIFFERENT allocator (e.g., a custom tracking allocator or just a different context).
 	// For this test, we'll just use a fresh allocator instance if possible, or simulate by changing the field.

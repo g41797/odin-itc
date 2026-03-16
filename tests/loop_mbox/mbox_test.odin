@@ -1,11 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
 
 //+test
 package loop_mbox_tests
 
-import loop_mbox "../../loop_mbox"
 import examples "../../examples"
+import loop_mbox "../../loop_mbox"
 import wakeup "../../wakeup"
 import list "core:container/intrusive/list"
 import "core:testing"
@@ -122,7 +120,10 @@ test_length :: proc(t: ^testing.T) {
 @(test)
 test_waker_called_on_send :: proc(t: ^testing.T) {
 	wc: _WC
-	waker := wakeup.WakeUper{ctx = rawptr(&wc), wake = _wc_wake}
+	waker := wakeup.WakeUper {
+		ctx  = rawptr(&wc),
+		wake = _wc_wake,
+	}
 	m := loop_mbox.init(examples.Msg, waker)
 	defer {_, _ = loop_mbox.close(m); loop_mbox.destroy(m)}
 	a_ptr := new(examples.Msg); a_ptr.data = 1
@@ -132,7 +133,11 @@ test_waker_called_on_send :: proc(t: ^testing.T) {
 	b: Maybe(^examples.Msg) = b_ptr; loop_mbox.send(m, &b)
 	c: Maybe(^examples.Msg) = c_ptr; loop_mbox.send(m, &c)
 	// wake should be called once per send; 3 sends → count == 3
-	testing.expect(t, wc.wake_count == 3, "wake should be called once per send; 3 sends → count == 3")
+	testing.expect(
+		t,
+		wc.wake_count == 3,
+		"wake should be called once per send; 3 sends → count == 3",
+	)
 	drain := loop_mbox.try_receive_batch(m)
 	for node := list.pop_front(&drain); node != nil; node = list.pop_front(&drain) {
 		free((^examples.Msg)(node))
@@ -142,7 +147,10 @@ test_waker_called_on_send :: proc(t: ^testing.T) {
 @(test)
 test_waker_close_on_close :: proc(t: ^testing.T) {
 	wc: _WC
-	waker := wakeup.WakeUper{ctx = rawptr(&wc), close = _wc_close}
+	waker := wakeup.WakeUper {
+		ctx   = rawptr(&wc),
+		close = _wc_close,
+	}
 	m := loop_mbox.init(examples.Msg, waker)
 	defer loop_mbox.destroy(m) // m.closed == true after close() below
 	_, _ = loop_mbox.close(m)

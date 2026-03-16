@@ -1,7 +1,9 @@
 /*
 Package mpsc is a lock-free multi-producer, single-consumer queue.
 
-It uses the Vyukov MPSC algorithm. No locks. No allocations.
+It uses the [[Vyukov MPSC algorithm; https://int08h.com/post/ode-to-a-vyukov-queue/]].
+
+No locks. No allocations.
 
 Requirement:
 
@@ -27,6 +29,6 @@ Copying the struct after init invalidates those pointers.
 package mpsc
 
 /*
-Note: Some test procedures may appear in the generated documentation. 
+Note: Some test procedures may appear in the generated documentation.
 This is because they are part of the same package to allow for white-box testing.
 */

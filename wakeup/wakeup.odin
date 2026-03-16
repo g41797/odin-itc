@@ -14,8 +14,8 @@ import "core:sync"
 // The zero value is valid. Callers must check wake != nil before calling.
 WakeUper :: struct {
 	ctx:   rawptr,
-	wake:  proc(rawptr),
-	close: proc(rawptr),
+	wake:  proc(_: rawptr),
+	close: proc(_: rawptr),
 }
 
 @(private)

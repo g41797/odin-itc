@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
-
 package mpsc
 
 import "base:intrinsics"
@@ -18,8 +15,8 @@ _ListNode :: list.Node
 Queue :: struct($T: typeid) {
 	head: ^list.Node, // producer end — updated atomically by multiple producers
 	tail: ^list.Node, // consumer end — updated by single consumer only
-	stub: list.Node,  // sentinel node; address used by head and tail
-	len:  int,        // item count — updated atomically
+	stub: list.Node, // sentinel node; address used by head and tail
+	len:  int, // item count — updated atomically
 }
 
 // init sets up the queue. Call once before push or pop.

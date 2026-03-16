@@ -1,11 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
 
 //+test
 package loop_mbox_tests
 
-import loop_mbox "../../loop_mbox"
 import examples "../../examples"
+import loop_mbox "../../loop_mbox"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
 import "core:sync"
@@ -13,11 +11,11 @@ import "core:testing"
 import "core:thread"
 
 N_EP_THREADS :: 10
-N_EP_MSGS    :: 1000
-N_EP_TOTAL   :: N_EP_THREADS * N_EP_MSGS
+N_EP_MSGS :: 1000
+N_EP_TOTAL :: N_EP_THREADS * N_EP_MSGS
 
 N_CS_THREADS :: 5
-N_CS_SENDS   :: 200
+N_CS_SENDS :: 200
 
 // _Slab_Ctx holds state for one producer thread in test_concurrent_producers.
 _Slab_Ctx :: struct {
@@ -44,7 +42,9 @@ test_concurrent_producers :: proc(t: ^testing.T) {
 	for i in 0 ..< N_EP_THREADS {
 		slabs[i] = make([]examples.Msg, N_EP_MSGS)
 		for j in 0 ..< N_EP_MSGS {
-			slabs[i][j] = examples.Msg{data = i * N_EP_MSGS + j}
+			slabs[i][j] = examples.Msg {
+				data = i * N_EP_MSGS + j,
+			}
 		}
 	}
 	defer for i in 0 ..< N_EP_THREADS {
@@ -59,7 +59,11 @@ test_concurrent_producers :: proc(t: ^testing.T) {
 	defer delete(threads)
 
 	for i in 0 ..< N_EP_THREADS {
-		ctxs[i] = _Slab_Ctx{m = m, slab = slabs[i], start = &start}
+		ctxs[i] = _Slab_Ctx {
+			m     = m,
+			slab  = slabs[i],
+			start = &start,
+		}
 		threads[i] = thread.create_and_start_with_data(&ctxs[i], proc(data: rawptr) {
 			c := (^_Slab_Ctx)(data)
 			sync.sema_wait(c.start)
@@ -113,7 +117,10 @@ test_close_during_send_race :: proc(t: ^testing.T) {
 	defer delete(threads)
 
 	for i in 0 ..< N_CS_THREADS {
-		ctxs[i] = _Send_Ctx{m = m, slab = slabs[i]}
+		ctxs[i] = _Send_Ctx {
+			m    = m,
+			slab = slabs[i],
+		}
 		threads[i] = thread.create_and_start_with_data(&ctxs[i], proc(data: rawptr) {
 			c := (^_Send_Ctx)(data)
 			for i in 0 ..< len(c.slab) {
@@ -144,7 +151,9 @@ test_close_during_send_race :: proc(t: ^testing.T) {
 	}
 
 	// After close, send must return false.
-	dummy := examples.Msg{data = -1}
+	dummy := examples.Msg {
+		data = -1,
+	}
 	dummy_opt: Maybe(^examples.Msg) = &dummy
 	ok := loop_mbox.send(m, &dummy_opt)
 	testing.expect(t, !ok, "send after close should return false")

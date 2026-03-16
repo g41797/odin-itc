@@ -1,12 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
 
 //+test
 package nbio_mbox_tests
 
-import nbio_mbox "../../nbio_mbox"
-import loop_mbox "../../loop_mbox"
 import examples "../../examples"
+import loop_mbox "../../loop_mbox"
+import nbio_mbox "../../nbio_mbox"
 import list "core:container/intrusive/list"
 import "core:nbio"
 import "core:testing"
@@ -23,7 +21,11 @@ test_nbio_mbox_invalid_loop :: proc(t: ^testing.T) {
 // test_nbio_mbox_timeout_kind: create with .Timeout, send, tick, receive.
 @(test)
 test_nbio_mbox_timeout_kind :: proc(t: ^testing.T) {
-	if !testing.expect(t, nbio.acquire_thread_event_loop() == nil, "failed to acquire event loop") {
+	if !testing.expect(
+		t,
+		nbio.acquire_thread_event_loop() == nil,
+		"failed to acquire event loop",
+	) {
 		return
 	}
 	defer nbio.release_thread_event_loop()
@@ -55,7 +57,11 @@ test_nbio_mbox_timeout_kind :: proc(t: ^testing.T) {
 // test_nbio_mbox_udp_kind: create with .UDP, send, tick, receive.
 @(test)
 test_nbio_mbox_udp_kind :: proc(t: ^testing.T) {
-	if !testing.expect(t, nbio.acquire_thread_event_loop() == nil, "failed to acquire event loop") {
+	if !testing.expect(
+		t,
+		nbio.acquire_thread_event_loop() == nil,
+		"failed to acquire event loop",
+	) {
 		return
 	}
 	defer nbio.release_thread_event_loop()
@@ -88,7 +94,11 @@ test_nbio_mbox_udp_kind :: proc(t: ^testing.T) {
 // test_nbio_mbox_udp_default_kind: init with no kind arg uses .UDP (the default).
 @(test)
 test_nbio_mbox_udp_default_kind :: proc(t: ^testing.T) {
-	if !testing.expect(t, nbio.acquire_thread_event_loop() == nil, "failed to acquire event loop") {
+	if !testing.expect(
+		t,
+		nbio.acquire_thread_event_loop() == nil,
+		"failed to acquire event loop",
+	) {
 		return
 	}
 	defer nbio.release_thread_event_loop()

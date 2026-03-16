@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
-
 package nbio_mbox
 
 import loop_mbox "../loop_mbox"

@@ -3,12 +3,12 @@
 
 package pool
 
+import wakeup "../wakeup"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
 import "core:mem"
 import "core:sync"
 import "core:time"
-import wakeup "../wakeup"
 
 // _PoolNode, _PoolMutex, _PoolAllocator, _PoolEvent, _PoolDuration, _PoolWaker keep -vet happy — it does not count generic field types as import usage.
 @(private)
@@ -210,10 +210,18 @@ get :: proc(
 // own message: msg^ = nil, returned to free-list or freed → (nil, true).
 // foreign message (allocator differs): msg^ = nil, returns (ptr, false) — caller must free ptr.
 // Calls reset(.Put) before recycling, outside the mutex.
-put :: proc(p: ^Pool($T), msg: ^Maybe(^T)) -> (^T, bool) where intrinsics.type_has_field(T, "node"),
-	intrinsics.type_field_type(T, "node") == list.Node,
+put :: proc(
+	p: ^Pool($T),
+	msg: ^Maybe(^T),
+) -> (
+	^T,
+	bool,
+) where intrinsics.type_has_field(T, "node"),
+	intrinsics.type_field_type(T, "node") ==
+	list.Node,
 	intrinsics.type_has_field(T, "allocator"),
-	intrinsics.type_field_type(T, "allocator") == mem.Allocator {
+	intrinsics.type_field_type(T, "allocator") ==
+	mem.Allocator {
 	if msg^ == nil {
 		return nil, true // nil inner — no-op
 	}
@@ -308,11 +316,9 @@ destroy :: proc(p: ^Pool($T)) where intrinsics.type_has_field(T, "node"),
 // length returns the number of messages currently in the free-list.
 // Thread-safe. Reads curr_msgs under mutex.
 length :: proc(p: ^Pool($T)) -> int where intrinsics.type_has_field(T, "node"),
-	intrinsics.type_field_type(T, "node") ==
-	list.Node,
+	intrinsics.type_field_type(T, "node") == list.Node,
 	intrinsics.type_has_field(T, "allocator"),
-	intrinsics.type_field_type(T, "allocator") ==
-	mem.Allocator {
+	intrinsics.type_field_type(T, "allocator") == mem.Allocator {
 	sync.mutex_lock(&p.mutex)
 	n := p.curr_msgs
 	sync.mutex_unlock(&p.mutex)

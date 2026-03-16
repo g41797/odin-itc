@@ -33,7 +33,7 @@ Since then, I have used it in:
 |    Linux    |    [Go](https://github.com/g41797/kissngoqueue)     |
 |     L/W/M   |    [Zig](https://github.com/g41797/mailbox)   |
 
-**Now it's Odin time!!!**
+**Now it's Odin time**
 
 ---
 

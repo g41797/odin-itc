@@ -3,17 +3,23 @@
 
 package loop_mbox
 
+import mpsc "../mpsc"
+import wakeup "../wakeup"
 import "base:intrinsics"
 import list "core:container/intrusive/list"
 import "core:mem"
-import mpsc "../mpsc"
-import wakeup "../wakeup"
 
 // -vet workarounds: generic struct field types are not counted as import usage.
-@(private) _MQ :: mpsc.Queue(struct {node: list.Node})
-@(private) _MW :: wakeup.WakeUper
-@(private) _MA :: mem.Allocator
-@(private) _MN :: list.Node
+@(private)
+_MQ :: mpsc.Queue(struct {
+		node: list.Node,
+	})
+@(private)
+_MW :: wakeup.WakeUper
+@(private)
+_MA :: mem.Allocator
+@(private)
+_MN :: list.Node
 
 // Mbox is a non-blocking mailbox backed by a lock-free MPSC queue.
 // Not copyable after init — internal pointers reference fields inside the struct.
@@ -34,7 +40,8 @@ init :: proc(
 	waker := wakeup.WakeUper{},
 	allocator := context.allocator,
 ) -> ^Mbox(T) where intrinsics.type_has_field(T, "node"),
-	intrinsics.type_field_type(T, "node") == list.Node {
+	intrinsics.type_field_type(T, "node") ==
+	list.Node {
 	m := new(Mbox(T), allocator)
 	if m == nil {
 		return nil
