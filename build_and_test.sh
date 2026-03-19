@@ -142,3 +142,8 @@ echo "${GREEN}  docs OK${NC}"
 
 echo
 echo "${GREEN}ALL CHECKS PASSED${NC}"
+
+echo
+echo "${BLUE}--- building docs ---${NC}"
+bash "$(dirname "$0")/docs_site/build.sh"
+echo "${GREEN}  docs OK${NC}"

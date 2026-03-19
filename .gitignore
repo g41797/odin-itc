@@ -37,8 +37,8 @@ welcomed_tests.md
 # Documentation tools
 /tools/tmp_pkg_repo
 /docs/build/
-tools/libcmark.so
-tools/odin-doc
+/docs_site/docs/apidocs/
+/docs_site/site/
 tools/doc_config.json
 tools/odin_doc_to_html.py
 /design/nbui-command-initial.md

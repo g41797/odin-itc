@@ -30,9 +30,10 @@ find . -name "index.html" -exec sed -i '/<h2 id="pkg-generation-information">/,/
 find . -name "index.html" -exec sed -i '/<li><a href="#pkg-generation-information">/d' {} +
 
 # Post-process: Make all links and assets relative
+# Patterns match href="/<non-slash>" to avoid corrupting protocol-relative URLs (href="//cdn...")
 # 1. Root index.html
-sed -i 's|href="/|href="./|g' index.html
-sed -i 's|src="/|src="./|g' index.html
+sed -i 's|href="/\([^/]\)|href="./\1|g' index.html
+sed -i 's|src="/\([^/]\)|src="./\1|g' index.html
 # Fix the library link specifically (it should point to its own subdirectory)
 sed -i 's|href="./odin-itc"|href="./odin-itc/"|g' index.html
 # Fix the blank root package link text
@@ -40,8 +41,8 @@ sed -i 's|<a href="./odin-itc/"></a>|<a href="./odin-itc/">mbox</a>|g' index.htm
 
 # 2. Collection home index.html (in odin-itc/ directory — depth 1)
 if [ -d "odin-itc" ]; then
-    sed -i 's|href="/|href="../|g' odin-itc/index.html
-    sed -i 's|src="/|src="../|g' odin-itc/index.html
+    sed -i 's|href="/\([^/]\)|href="../\1|g' odin-itc/index.html
+    sed -i 's|src="/\([^/]\)|src="../\1|g' odin-itc/index.html
     # Fix self-links and navigation in the package page
     sed -i 's|href="\.\./odin-itc"|href="../odin-itc/"|g' odin-itc/index.html
     # Fix the blank root package link text
@@ -51,8 +52,8 @@ fi
 # 3. Sub-package index.html files (in odin-itc/*/ directory — depth 2)
 for subdir in odin-itc/*/; do
     if [ -f "${subdir}index.html" ]; then
-        sed -i 's|href="/|href="../../|g' "${subdir}index.html"
-        sed -i 's|src="/|src="../../|g' "${subdir}index.html"
+        sed -i 's|href="/\([^/]\)|href="../../\1|g' "${subdir}index.html"
+        sed -i 's|src="/\([^/]\)|src="../../\1|g' "${subdir}index.html"
         # Fix the blank root package link text
         sed -i 's|<a href="../../odin-itc/"></a>|<a href="../../odin-itc/">mbox</a>|g' "${subdir}index.html"
     fi

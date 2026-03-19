@@ -15,7 +15,10 @@ rm -rf "$TEMP_DIR"
 
 # 2. Clone the renderer source
 echo "Cloning pkg.odin-lang.org..."
-git clone --depth 1 https://github.com/odin-lang/pkg.odin-lang.org.git "$TEMP_DIR"
+git clone https://github.com/odin-lang/pkg.odin-lang.org.git "$TEMP_DIR"
+cd "$TEMP_DIR"
+git checkout 5a239797
+cd "$TOOLS_DIR"
 
 # 3. Build the tool
 echo "Building binary..."
