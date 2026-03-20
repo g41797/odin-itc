@@ -12,7 +12,7 @@ No philosophy — just **coherent, consistent API**.
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,
 }
 ```

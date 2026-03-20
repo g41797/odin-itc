@@ -46,7 +46,7 @@ Same pattern as Odin stdlib:
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,        // user-defined enum value — stamped by factory on creation
 }
 ```
@@ -83,7 +83,7 @@ Whether participant types are themselves intrusive (carry additional nodes) does
 User defines the id enum and the union next to each other:
 
 ```odin
-FlowId :: enum { Chunk, Progress }
+FlowId :: enum int { Chunk = 1, Progress = 2 }
 
 FlowMsg :: union { ^Chunk, ^Progress }
 ```
@@ -94,7 +94,7 @@ User writes:
 - on_put — implements backpressure logic
 - dispose — frees internal resources per id
 - flow_send — wraps `^Maybe(^T)` → `^Maybe(^PolyNode)`, calls `mbox_send`
-- flow_receive — calls `mbox.wait_receive`, switches on `node.id`, casts to `FlowMsg`
+- flow_receive — calls `mbox_wait_receive`, switches on `node.id`, casts to `FlowMsg`
 
 itc provides the pipe. User provides the protocol.
 
@@ -129,8 +129,9 @@ FlowPolicy :: struct {
     // Use for sanitization/zeroing.
     on_get:  proc(ctx: rawptr, m: ^Maybe(^PolyNode)),
 
-    // Called during pool_put.
-    // To reject, hook disposes and sets m^ = nil.
+    // Called during pool_put, outside lock.
+    // If hook sets m^ = nil → item consumed (e.g., disposed for backpressure).
+    // If m^ != nil after hook → pool MUST add to free-list.
     on_put:  proc(ctx: rawptr, alloc: mem.Allocator, in_pool_count: int, m: ^Maybe(^PolyNode)),
 
     // Called for every node remaining in the pool during pool_destroy.
@@ -152,10 +153,10 @@ FLOW_POLICY :: FlowPolicy{
 policy := FLOW_POLICY
 policy.ctx = &master // runtime — ctx points to Master or any user state
 
-pool_init(&p, policy, master.allocator)
+pool_init(&p, policy, {int(FlowId.Chunk), int(FlowId.Progress)}, master.allocator)
 ```
 
-The Pool learns which IDs are supported dynamically via `pool_get` calls that trigger the `factory`.
+pool_init registers the complete set of valid ids for this pool. All ids must be > 0.
 `ctx` is runtime — cannot be set in a `::` constant.
 
 ### Three modes
@@ -175,7 +176,6 @@ m: Maybe(^PolyNode)
 ok := pool_get(&p, int(FlowId.Chunk), .Recycle_Or_Alloc, &m)
 ```
 
-The pool does not pre-register IDs. It learns them dynamically. If an ID is passed to `pool_get` that the `factory` hook does not recognize, allocation fails.
 Mode drives the allocation strategy for this call.
 Pool calls `factory(policy.ctx, id, ...)` when allocation is needed.
 Factory uses `ctx` to reach the allocator and any other needed state.
@@ -188,10 +188,10 @@ Factory allocates correct concrete type, stamps `node.id = id`, returns `^PolyNo
 pool_put(&p, &m)
 ```
 
-Validates the item's id. If the id is unrecognized (foreign item), the pool does not accept it — `m^` remains non-nil, ownership stays with the caller.
-If the item is not foreign, the pool calls `policy.on_put(ctx, alloc, in_pool_count, &m)`.
-The `on_put` hook can implement backpressure. To reject an item, the hook must dispose of it and set `m^ = nil`.
-If `m^` is still valid after the hook, the pool adds it to the free-list. Sanitization for reuse occurs in the `on_get` hook during the next `pool_get` call.
+Validates the item's id against the pool's registered ids set. Unknown id → panic.
+Calls policy.on_put(ctx, alloc, in_pool_count, &m) outside lock.
+If m^ is still non-nil after the hook, pool adds it to the free-list and sets m^ = nil.
+After pool_put returns, m^ is always nil. defer pool_put is unconditionally safe.
 
 ### FlowPolicy
 
@@ -292,7 +292,9 @@ if pool_get(&p, int(FlowId.Chunk), .Recycle_Or_Alloc, &m) {
     c.len = fill(c.data[:])
 
     // send — m^ = nil on success, pool_put is no-op
-    mbox_send(&mb, &m)
+    if mbox_send(&mb, &m) != .Ok {
+        return // send failed — m^ unchanged, defer pool_put recycles
+    }
 }
 ```
 
@@ -300,7 +302,9 @@ if pool_get(&p, int(FlowId.Chunk), .Recycle_Or_Alloc, &m) {
 
 ```odin
 m: Maybe(^PolyNode)
-mbox.wait_receive(&mb, &m)
+if mbox_wait_receive(&mb, &m) != .Ok {
+    return // mailbox closed — nothing to process
+}
 defer pool_put(&p, &m)             // [itc: defer-put] safety net — fires if put not reached
 
 switch FlowId(m.?.id) {
@@ -329,8 +333,7 @@ Receiver switch is user code. itc delivers `^PolyNode` and the `id`. User casts,
 | after `send` success | `m^` = nil — transfer complete |
 | after `send` failure | `m^` unchanged — caller still holds, dispose runs |
 | after `wait_receive` | receiver owns via `Maybe(^PolyNode)` — inner non-nil |
-| after `pool_put` success | `m^` = nil — returned to pool |
-| after `pool_put`, foreign id | `m^` is not `nil` — caller retains ownership |
+| after `pool_put` | `m^` = nil — always (or panic on unknown id) |
 | `defer-put` | no-op if transferred or put, recycles or disposes if stuck |
 
 ---
@@ -340,7 +343,7 @@ Receiver switch is user code. itc delivers `^PolyNode` and the `id`. User casts,
 | Location | Check | On failure |
 |---|---|---|
 | `pool_get` | factory can create `id` | error |
-| `pool_put` | id is valid (recognized by factory) | foreign — `m^` remains non-nil |
+| `pool_put` | id is in pool's registered ids set | panic — programming error, not recoverable |
 | receiver switch | id known to user | default case — dispose |
 
 No compile-time checking from itc. All checks are runtime.
@@ -356,7 +359,7 @@ User is responsible for correctness of casts and switch coverage.
 - hooks dispatch — `factory` / `on_get` / `on_put` / `dispose` called with `ctx`
 - hooks called **outside** pool mutex — guaranteed
 - `on_put` — pool passes `in_pool_count` per id, hook implements policy
-- `mbox.close` — returns remaining list as `^PolyNode` head
+- `mbox_close` — drains and returns remaining list as `^PolyNode` head
 
 ## What user owns
 
@@ -386,7 +389,7 @@ Three valid endings:
 
 ```
 pool_put(&p, &m)                       // recycle — normal path after processing
-flow_dispose(policy.ctx, alloc, &m)    // destroy — shutdown, foreign, or byte limit exceeded
+flow_dispose(policy.ctx, alloc, &m)    // destroy — shutdown, or byte limit exceeded
 mbox_send(&mb, &m)                     // transfer — receiver will put or dispose
 ```
 
@@ -438,6 +441,7 @@ if item was popped {
 }
 
 // pool_put path
+check id in pool.ids → PANIC if unknown
 lock
   get count for item id
 unlock
@@ -447,8 +451,10 @@ on_put(ctx, alloc, count, &m)  ← outside lock
 if m^ != nil {
     lock
       prepend to free-list
+      m^ = nil
     unlock
 }
+// m^ is always nil after pool_put
 ```
 
 **Why**: hooks receive `ctx` which can point to any user state including mutexes. Calling hooks inside the pool mutex would make deadlock trivially easy. Some OS do not support recursive mutexes — no assumption can be made.

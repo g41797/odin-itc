@@ -9,7 +9,7 @@ The Pool is a **mechanism-only** MPMC container for `PolyNode` carriers. It prov
 Every type participating in the pool must embed `PolyNode` at offset 0.
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode, // Intrusive link for MPMC free-lists
+    using node: list.Node, // Intrusive link for MPMC free-lists
     id:   int,        // Type discriminator (stamped by factory)
 }
 ```
@@ -37,7 +37,7 @@ FlowPolicy :: struct {
     // Use for sanitization/zeroing.
     on_get:  proc(ctx: rawptr, m: ^Maybe(^PolyNode)),
 
-    // Called during pool_put. 
+    // Called during pool_put.
     // If hook sets m^ = nil, the Pool forgets the node (consumed).
     // If m^ != nil, the Pool adds it to the free-list.
     on_put:  proc(ctx: rawptr, alloc: mem.Allocator, in_pool_count: int, m: ^Maybe(^PolyNode)),
@@ -80,19 +80,19 @@ Initializes MPMC headers and internal accounting.
 ## 4. Architectural Invariants
 
 ### I1: Ownership Finality (The `Maybe` Rule)
-All APIs operate on `^Maybe(^PolyNode)`. 
+All APIs operate on `^Maybe(^PolyNode)`.
 * **Input**: Passing a `Maybe` to an API implies a transfer candidate.
 * **Output**: If the API sets `m^ = nil`, ownership is gone. If `m^ != nil`, the caller still owns the memory (e.g., if a `put` failed or a `send` was rejected).
 
 ### I2: The Outside-Lock Rule (Deadlock Prevention)
-The Pool is strictly prohibited from holding internal locks (mutexes/spinlocks) while executing any `FlowPolicy` hook. 
+The Pool is strictly prohibited from holding internal locks (mutexes/spinlocks) while executing any `FlowPolicy` hook.
 * **Reason**: User hooks often access `ctx` which may contain application-level locks. Calling a hook inside a Pool lock creates a circular dependency risk.
 
 ### I3: Hygiene Guarantee
 The `on_get` hook is the mandatory gatekeeper. No node may transition from "Recycled" to "In-Use" without passing through `on_get`. This ensures that data from a previous lifecycle cannot leak into a new task.
 
 ### I4: Accounting Symmetry
-The Pool maintains an atomic `in_pool_count` per `id`. 
+The Pool maintains an atomic `in_pool_count` per `id`.
 * `factory` and `on_put` receive this count to make informed decisions about backpressure and memory growth.
 * If `in_pool_count` exceeds a user-defined threshold in `on_put`, the hook should manually `dispose` and set `m^ = nil` to trim the pool.
 
@@ -127,7 +127,7 @@ on_put :: proc(ctx: rawptr, alloc: mem.Allocator, count: int, m: ^Maybe(^PolyNod
     if count > 512 {
         // Pool is too large; kill this node instead of recycling
         dispose_concrete_type(m^)
-        m^ = nil 
+        m^ = nil
     }
 }
 ```

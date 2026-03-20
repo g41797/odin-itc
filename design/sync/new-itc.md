@@ -12,7 +12,7 @@ No philosophy — just **coherent, consistent API**.
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,
 }
 ```
@@ -142,20 +142,20 @@ mbox_try_receive_batch :: proc(
 ## close
 
 ```odin
-mbox_close :: proc(mb: ^Mailbox)
+mbox_close :: proc(mb: ^Mailbox) -> ^PolyNode
 ```
 
 ### Effects
 
 * further send → `.Closed`
-* receive continues until empty
-* then returns `.Closed`
+* returns head of remaining node chain (nil if empty)
+* caller must drain via flow_dispose
 
 ---
 
 ---
 
-# 3. Pool API (lifecycle + reuse)
+# 3. Pool API (mechanism only)
 
 ## Types
 
@@ -188,8 +188,9 @@ FlowPolicy :: struct {
     // Use for sanitization/zeroing.
     on_get:  proc(ctx: rawptr, m: ^Maybe(^PolyNode)),
 
-    // Called during pool_put.
-    // To reject, hook disposes and sets m^ = nil.
+    // Called during pool_put, outside lock.
+    // If hook sets m^ = nil → item consumed (e.g., disposed for backpressure).
+    // If m^ != nil after hook → pool MUST add to free-list.
     on_put:  proc(ctx: rawptr, alloc: mem.Allocator, in_pool_count: int, m: ^Maybe(^PolyNode)),
 
     // Called for every node remaining in the pool during pool_destroy.
@@ -202,7 +203,7 @@ FlowPolicy :: struct {
 ## init / destroy
 
 ```odin
-pool_init :: proc(p: ^Pool, policy: FlowPolicy, alloc := context.allocator)
+pool_init :: proc(p: ^Pool, policy: FlowPolicy, ids: []int, alloc := context.allocator)
 pool_destroy :: proc(p: ^Pool)
 ```
 
@@ -236,9 +237,10 @@ pool_put :: proc(p: ^Pool, m: ^Maybe(^PolyNode))
 
 ### Contract
 
-*   The pool executes the mechanism for returning an item, delegating all lifecycle decisions to `FlowPolicy`.
-*   It calls the `on_put` hook from the `FlowPolicy`, which implements the actual logic.
-*   After `pool_put`, `m^` is always nil for valid (own) items. If `m^ != nil` after the call, the item was not accepted by the pool (foreign id) — caller still owns it.
+*   pool_put validates the item's id against the pool's registered id set. Unknown id → panic.
+*   Calls the on_put hook from FlowPolicy (outside lock).
+*   After the hook: if m^ != nil, pool pushes to free-list and sets m^ = nil.
+*   After pool_put returns, m^ is always nil. defer pool_put is unconditionally safe.
 
 ---
 
@@ -255,6 +257,33 @@ pool_put_all :: proc(
 *   applies `put` per node
 
 
+
+---
+
+# 4. ID System
+
+## Rules
+
+- Every item id must be > 0 (zero is reserved/invalid)
+- pool_init accepts the complete set of valid ids for this pool
+- pool_put validates the item's id on every call — unknown id causes panic
+- factory stamps node.id at allocation time
+- id values are user-defined integer constants (typically from an enum)
+
+## FlowId example
+
+```odin
+FlowId :: enum int {
+    Chunk    = 1,
+    Progress = 2,
+}
+```
+
+## Registration at init
+
+```odin
+pool_init(&pool, policy, {int(FlowId.Chunk), int(FlowId.Progress)})
+```
 
 ---
 
@@ -281,6 +310,8 @@ This is the **core consistency** you built.
 | `m^ = nil`              | ownership transferred |
 | `m^ unchanged`          | transfer failed       |
 | `m^ = nil` (error case) | consumed internally   |
+
+For pool_put specifically: m^ is always nil after return (panic on invalid id). The m^ unchanged case applies to mbox_send failure only.
 
 ---
 
@@ -309,7 +340,9 @@ if mbox_send(&mb, &m) != .Ok {
 // receive
 // Note: In a real scenario, sender and receiver are in different threads.
 // The 'm' variable would be different. This is a conceptual flow.
-mbox_wait_receive(&mb, &m)
+if mbox_wait_receive(&mb, &m) != .Ok {
+    return // mailbox closed — m^ is unchanged
+}
 defer pool_put(&pool, &m) // Safety net for receiver side
 
 // process
@@ -320,7 +353,7 @@ case .Chunk:
 
 // return to pool
 pool_put(&pool, &m)
-// If m^ != nil here, item is foreign — caller retains ownership
+// pool_put always sets m^ = nil (panics on invalid id)
 ```
 
 ---
@@ -351,4 +384,4 @@ pool_put(&pool, &m)
 
 # 8. One-line system definition
 
-> **Mailbox moves ownership, Pool manages lifecycle, `Maybe(^T)` enforces correctness.**
+> **Mailbox moves ownership, Pool executes reuse, `Maybe(^T)` enforces correctness.**

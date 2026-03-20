@@ -1,7 +1,7 @@
 # odin-itc: Unified Pool Specification (v2.0)
 
 ## 1. Core Philosophy
-The Pool is a **mechanism-only** MPMC container for `PolyNode` carriers. It provides thread-safe reuse while delegating all lifecycle decisions (allocation limits, backpressure, disposal, and node sanitization) to a user-provided `FlowPolicy`.
+The Pool is a **mechanism-only** MPMC container for `PolyNode` carriers. It provides thread-safe reuse while delegating all lifecycle decisions (allocation limits, backpressure, disposal, and node sanitization) to a user-provided `FlowPolicy`. Pool enforces strict ID validation — unknown id causes immediate panic.
 
 ## 2. Type Definitions
 
@@ -9,7 +9,7 @@ The Pool is a **mechanism-only** MPMC container for `PolyNode` carriers. It prov
 Every type participating in the pool must embed `PolyNode` at offset 0.
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode, // Intrusive link for MPMC free-lists
+    using node: list.Node, // Intrusive link for MPMC free-lists
     id:   int,        // Type discriminator (stamped by factory)
 }
 ```
@@ -37,9 +37,9 @@ FlowPolicy :: struct {
     // Use for sanitization/zeroing.
     on_get:  proc(ctx: rawptr, m: ^Maybe(^PolyNode)),
 
-    // Called during pool_put.
-    // If hook sets m^ = nil, the Pool forgets the node (consumed).
-    // If m^ != nil, the Pool adds it to the free-list.
+    // Called during pool_put, outside lock.
+    // If hook sets m^ = nil → item consumed (e.g., disposed for backpressure).
+    // If m^ != nil after hook → pool MUST add to free-list (invariant, not optional).
     on_put:  proc(ctx: rawptr, alloc: mem.Allocator, in_pool_count: int, m: ^Maybe(^PolyNode)),
 
     // Called for every node remaining in the pool during pool_destroy.
@@ -52,8 +52,10 @@ FlowPolicy :: struct {
 ## 3. API Reference
 
 ### `pool_init`
-`pool_init(p: ^Pool, policy: FlowPolicy, alloc := context.allocator)`
+`pool_init(p: ^Pool, policy: FlowPolicy, ids: []int, alloc := context.allocator)`
 Initializes MPMC headers and internal accounting.
+
+`ids`: the complete set of valid item IDs this pool may hold. Must be non-empty. All IDs must be > 0. Passing an unknown ID to pool_put will panic.
 
 ### `pool_get`
 `pool_get(p: ^Pool, id: int, mode: Pool_Get_Mode, out: ^Maybe(^PolyNode)) -> (ok: bool)`
@@ -63,9 +65,12 @@ Initializes MPMC headers and internal accounting.
 
 ### `pool_put`
 `pool_put(p: ^Pool, m: ^Maybe(^PolyNode))`
-1.  Retrieves `in_pool_count` for the node's `id`.
-2.  Calls `policy.on_put(...)` **outside of internal locks**.
-3.  If `m^` is still valid, pushes to MPMC free-list, increments count, and sets `m^ = nil`.
+1. Validate: checks `m.?.id` against `pool.ids`. If not found → **PANIC**.
+2. Retrieves `in_pool_count` for the node's `id`.
+3. Calls `policy.on_put(...)` **outside of internal locks**.
+4. If `m^` is still non-nil, pushes to MPMC free-list, increments count, and sets `m^ = nil`.
+
+After pool_put returns, `m^` is **always nil**. This makes `defer pool_put` unconditionally safe.
 
 ### `pool_destroy`
 `pool_destroy(p: ^Pool)`
@@ -82,7 +87,7 @@ Initializes MPMC headers and internal accounting.
 ### I1: Ownership Finality (The `Maybe` Rule)
 All APIs operate on `^Maybe(^PolyNode)`.
 * **Input**: Passing a `Maybe` to an API implies a transfer candidate.
-* **Output**: If the API sets `m^ = nil`, ownership is gone. If `m^ != nil`, the caller still owns the memory (e.g., if a foreign item was returned or a send was rejected).
+* **Output**: If the API sets `m^ = nil`, ownership is gone. If `m^ != nil`, the caller still owns the memory (e.g., if a send was rejected). pool_put always results in `m^ = nil`.
 
 ### I2: The Outside-Lock Rule (Deadlock Prevention)
 The Pool is strictly prohibited from holding internal locks (mutexes/spinlocks) while executing any `FlowPolicy` hook.
@@ -96,21 +101,28 @@ The Pool maintains an atomic `in_pool_count` per `id`.
 * `factory` and `on_put` receive this count to make informed decisions about backpressure and memory growth.
 * If `in_pool_count` exceeds a user-defined threshold in `on_put`, the hook should manually `dispose` and set `m^ = nil` to trim the pool.
 
+### I5: Panic on Unknown ID
+The pool refuses to accept any item whose id is not in the registered ids set.
+This is an unrecoverable programming error — panic is the correct response.
+Silent handling (returning the item to caller) masks bugs and creates undefined behavior.
+
 ---
 
 ## 5. Usage Idioms
 
 ### FlowId definition
 ```odin
-FlowId :: enum {
-    Chunk,
-    Progress,
+FlowId :: enum int {
+    Chunk    = 1,  // id must be > 0
+    Progress = 2,
 }
 ```
 
 ### Initialization (Seeding)
 To pre-allocate a pool to avoid runtime latency:
 ```odin
+pool_init(&my_pool, policy, {int(FlowId.Chunk), int(FlowId.Progress)})
+
 for _ in 0..<100 {
     m: Maybe(^PolyNode)
     if pool_get(&my_pool, int(FlowId.Chunk), .Alloc_Only, &m) {
@@ -124,19 +136,26 @@ The standard acquisition pattern:
 ```odin
 m: Maybe(^PolyNode)
 if pool_get(&pool, int(FlowId.Chunk), .Recycle_Or_Alloc, &m) {
-    defer pool_put(&pool, &m) // Ensure return even on early exit
+    defer pool_put(&pool, &m) // Always safe: pool_put always sets m^ = nil (or panics on invalid id)
     // ... work ...
 }
 ```
 
+Why defer pool_put is safe:
+- m^ = nil (transferred): pool_put is a no-op (m^ == nil on entry → nothing to do)
+- m^ != nil (not transferred): pool_put recycles, or on_put hook disposes — either way m^ = nil
+- invalid id: pool_put panics — programming error surfaces immediately
+No silent "silently ignored" path exists.
+
 ### Backpressure Logic (Inside `on_put`)
 ```odin
 on_put :: proc(ctx: rawptr, alloc: mem.Allocator, count: int, m: ^Maybe(^PolyNode)) {
-    if m == nil || m^ == nil { return } // Defensive nil check for robustness
+    if m == nil || m^ == nil { return }
     if count > 512 {
-        // Pool is too large; kill this node instead of recycling
-        flow_dispose(ctx, alloc, m) // Use the policy's dispose hook
+        // Dispose — sets m^ = nil. Pool will not add to free-list.
+        flow_dispose(ctx, alloc, m)
     }
+    // If m^ is still non-nil here, pool MUST add it to the free-list.
 }
 ```
 

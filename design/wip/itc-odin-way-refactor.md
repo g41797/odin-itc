@@ -57,7 +57,7 @@ Instead, ownership is expressed by **return values and explicit API contracts**,
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,
 }
 

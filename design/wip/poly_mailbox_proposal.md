@@ -46,7 +46,7 @@ Same pattern as Odin stdlib:
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,        // user-defined enum value — stamped by factory on creation
 }
 ```

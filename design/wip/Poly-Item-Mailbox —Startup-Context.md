@@ -28,7 +28,7 @@ All meaning is outside ITC.
 
 ```odin
 PolyNode :: struct {
-    next: ^PolyNode,
+    using node: list.Node,
     id:   int,   // runtime type identity (tag)
 }
 ````
