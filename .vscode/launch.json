@@ -13,6 +13,97 @@
             "initCommands": [
                 "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
             ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (mpsc/)",
+            "program": "${workspaceFolder}/debug_mpsc",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (mpsc/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (wakeup/)",
+            "program": "${workspaceFolder}/debug_wakeup",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (wakeup/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (tests/)",
+            "program": "${workspaceFolder}/debug_tests",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (tests/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (tests/mbox/)",
+            "program": "${workspaceFolder}/debug_tests_mbox",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (tests/mbox/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (tests/loop_mbox/)",
+            "program": "${workspaceFolder}/debug_tests_loop_mbox",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (tests/loop_mbox/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (tests/nbio_mbox/)",
+            "program": "${workspaceFolder}/debug_tests_nbio_mbox",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (tests/nbio_mbox/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests (tests/pool/)",
+            "program": "${workspaceFolder}/debug_tests_pool",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Tests (tests/pool/)",
+            "terminal": "integrated",
+            "initCommands": [
+                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
+            ]
         }
     ]
 }

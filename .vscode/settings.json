@@ -12,7 +12,8 @@
         "**/*.a": true,
         "**/*.o": true,
         "**/*.obj": true,
-        "**/*.pdb": true
+        "**/*.pdb": true,
+        "debug_*": true
     },
     "search.exclude": {
         "**/*.a": true,

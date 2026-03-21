@@ -17,6 +17,90 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (mpsc/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/mpsc",
+                "${workspaceFolder}/debug_mpsc"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (wakeup/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/wakeup",
+                "${workspaceFolder}/debug_wakeup"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (tests/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/tests",
+                "${workspaceFolder}/debug_tests"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (tests/mbox/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/tests/mbox",
+                "${workspaceFolder}/debug_tests_mbox"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (tests/loop_mbox/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/tests/loop_mbox",
+                "${workspaceFolder}/debug_tests_loop_mbox"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (tests/nbio_mbox/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/tests/nbio_mbox",
+                "${workspaceFolder}/debug_tests_nbio_mbox"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Tests (tests/pool/)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "args": [
+                "/home/g41797/.local/bin/odin",
+                "${workspaceFolder}/tests/pool",
+                "${workspaceFolder}/debug_tests_pool"
+            ],
+            "group": "build",
+            "problemMatcher": []
         }
     ]
 }
