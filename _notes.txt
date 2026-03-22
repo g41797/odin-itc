@@ -30,46 +30,28 @@ Add core:nbio#6124
     https://github.com/odin-lang/Odin/pull/6124
 
 
-Debugging Odin tests in VSCode
 
-  Setup (one time)
+Run under workspace
 
-  Open the Run & Debug panel: Ctrl+Shift+D
+    code odin-itc.code-workspace
 
-  Workflow
+    Flow:
 
-  1. Set a breakpoint — click in the gutter (left of line number) in any .odin file you want to pause at
-  2. Select the config — in the Run & Debug dropdown at the top, pick e.g. Debug Tests (tests/)
-  3. Press F5
+    EXPLORER
+    ├── root/                    ← .vscode/ at repo root
+    │   ├── mbox/, mpsc/, tests/ ...
+    └── layer1/                  ← layers/layer1/.vscode/
+        ├── item/, hooks/
+        └── tests/
 
-    - VSCode runs the preLaunchTask: odin test ./tests/ -debug -o:none -out:./debug_tests
-    - Tests run once to completion (build side effect)
-    - Then lldb launches the same binary — this is the debuggable run
-    - Execution pauses at your breakpoint
+    F5 in a root file   → "Debug Tests" → picks from: mpsc/, wakeup/, tests/, tests/mbox/ ...
+    F5 in a layer1 file → "Debug Tests" → picks from: tests/item/, tests/hooks/
 
-  Controls once paused
+    ${workspaceFolder} resolves to the correct root for each — repo root or layers/layer1/ — so paths and binaries stay separate.
 
-  ┌───────────┬───────────────────┐
-  │    Key    │      Action       │
-  ├───────────┼───────────────────┤
-  │ F5        │ Continue          │
-  ├───────────┼───────────────────┤
-  │ F10       │ Step over         │
-  ├───────────┼───────────────────┤
-  │ F11       │ Step into         │
-  ├───────────┼───────────────────┤
-  │ Shift+F11 │ Step out          │
-  ├───────────┼───────────────────┤
-  │ F9        │ Toggle breakpoint │
-  └───────────┴───────────────────┘
+    When layer2 arrives: add { "name": "layer2", "path": "layers/layer2" } to the .code-workspace file and create
+    layers/layer2/.vscode/.
 
-  To debug a specific test only
+To create layerN+1 when the time comes:
 
-  In launch.json, set args on the config you want:
-  "args": ["-test-name", "test_stress"]
-  This skips all other tests — the debugger goes straight to that one.
-
-  Important caveat
-
-  The tests run twice — once headless during the build task, once under the debugger. If a test has a side effect (file creation,
-  port binding) you may see conflicts. For most unit tests this is not an issue.
+    cd layers && ./create_layer.sh

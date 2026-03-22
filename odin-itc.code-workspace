@@ -1,0 +1,13 @@
+{
+    "folders": [
+        {
+            "name": "root",
+            "path": "."
+        },
+        {
+            "name": "layer1",
+            "path": "layers/layer1"
+        },
+    ],
+    "settings": {}
+}

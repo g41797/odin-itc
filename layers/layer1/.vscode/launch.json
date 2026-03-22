@@ -4,19 +4,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug Odin",
-            "program": "${workspaceFolder}/${workspaceFolderBasename}",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Build Odin",
-            "terminal": "integrated",
-            "initCommands": [
-                "command script import /home/g41797/dev/langs/odin-dist/odin_lldb.py"
-            ]
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug Tests",
             "program": "${workspaceFolder}/debug_current",
             "args": [],

@@ -1,3 +1,6 @@
+# VSCode debug binary
+debug_current
+
 # Odin build artifacts
 *.o
 *.a

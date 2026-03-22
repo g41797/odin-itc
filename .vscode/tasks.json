@@ -19,88 +19,35 @@
             "problemMatcher": []
         },
         {
-            "label": "Build Tests (mpsc/)",
+            "label": "Build Tests",
             "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
+            "command": "/home/g41797/.local/bin/odin",
             "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/mpsc",
-                "${workspaceFolder}/debug_mpsc"
+                "build",
+                "${workspaceFolder}/${input:testPackage}",
+                "-build-mode:test",
+                "-debug",
+                "-o:none",
+                "-out:${workspaceFolder}/debug_current"
             ],
             "group": "build",
             "problemMatcher": []
-        },
+        }
+    ],
+    "inputs": [
         {
-            "label": "Build Tests (wakeup/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/wakeup",
-                "${workspaceFolder}/debug_wakeup"
-            ],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Build Tests (tests/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/tests",
-                "${workspaceFolder}/debug_tests"
-            ],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Build Tests (tests/mbox/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/tests/mbox",
-                "${workspaceFolder}/debug_tests_mbox"
-            ],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Build Tests (tests/loop_mbox/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/tests/loop_mbox",
-                "${workspaceFolder}/debug_tests_loop_mbox"
-            ],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Build Tests (tests/nbio_mbox/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/tests/nbio_mbox",
-                "${workspaceFolder}/debug_tests_nbio_mbox"
-            ],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Build Tests (tests/pool/)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.vscode/build_test.sh",
-            "args": [
-                "/home/g41797/.local/bin/odin",
-                "${workspaceFolder}/tests/pool",
-                "${workspaceFolder}/debug_tests_pool"
-            ],
-            "group": "build",
-            "problemMatcher": []
+            "id": "testPackage",
+            "type": "pickString",
+            "description": "Select test package",
+            "options": [
+                { "label": "mpsc/",             "value": "mpsc" },
+                { "label": "wakeup/",           "value": "wakeup" },
+                { "label": "tests/",            "value": "tests" },
+                { "label": "tests/mbox/",       "value": "tests/mbox" },
+                { "label": "tests/loop_mbox/",  "value": "tests/loop_mbox" },
+                { "label": "tests/nbio_mbox/",  "value": "tests/nbio_mbox" },
+                { "label": "tests/pool/",       "value": "tests/pool" }
+            ]
         }
     ]
 }
