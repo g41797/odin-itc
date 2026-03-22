@@ -37,7 +37,7 @@
 
 **Path:** `layers/layer1/`
 
-**Note:** layer1 contains `hooks` (factory, on_get, on_put, dispose proc fields).
+**Note:** layer1 contains `hooks` (`ctor`, `dtor` proc fields only).
 Per spec, hooks belong at layer2.
 This is accepted — layer1 is a slightly richer layer1, all tests pass.
 
@@ -46,11 +46,11 @@ This is accepted — layer1 is a slightly richer layer1, all tests pass.
 | Package | Path | Import path (from inside layer1) | Contents |
 |---------|------|----------------------------------|----------|
 | item | `item/` | `"./item"` (local) | `PolyNode`, `Maybe` — foundation types |
-| hooks | `hooks/` | `"../item"` (item is its dependency) | `FlowPolicy` struct — factory, on_get, on_put, dispose proc fields |
+| hooks | `hooks/` | `"../item"` (item is its dependency) | `Ctor_Dtor` struct — ctor, dtor proc fields |
 | examples/item | `examples/item/` | — | `Event`, `Sensor`, `ItemId`; `example_produce_consume`, `example_ownership` |
 | examples/hooks | `examples/hooks/` | — | `item_factory`, `item_dispose`, `make_flow_policy` |
 | tests/item | `tests/item/` | — | integration tests for examples/item |
-| tests/hooks | `tests/hooks/` | — | 7 tests: factory_event, factory_sensor, factory_unknown, dispose, roundtrip, on_get/on_put nil, dispose_nil_handle |
+| tests/hooks | `tests/hooks/` | — | 6 tests: factory_event, factory_sensor, factory_unknown, dispose, roundtrip, dispose_nil_handle |
 
 ### Key types
 
@@ -62,16 +62,14 @@ PolyNode :: struct {
 }
 
 // package hooks
-FlowPolicy :: struct {
-    factory: proc(id: int) -> Maybe(^item.PolyNode),
-    on_get:  proc(m: ^Maybe(^item.PolyNode)),
-    on_put:  proc(m: ^Maybe(^item.PolyNode)),
-    dispose: proc(m: ^Maybe(^item.PolyNode)),
+Ctor_Dtor :: struct {
+    ctor: proc(id: int) -> Maybe(^item.PolyNode),
+    dtor: proc(m: ^Maybe(^item.PolyNode)),
 }
 ```
 
-Note: layer1 `FlowPolicy` proc signatures are simpler than the full spec.
-The full spec (layer3+) adds `ctx rawptr`, `alloc mem.Allocator`, `in_pool_count int` params.
+Note: layer1 `Ctor_Dtor` has `ctor` and `dtor` only — create and destroy, no pool logic.
+`PoolHooks` (layer3+) adds `ctx rawptr`, `in_pool_count int`, merges create/reuse into `on_get`.
 
 ### Build
 

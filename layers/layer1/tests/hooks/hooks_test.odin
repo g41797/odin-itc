@@ -62,14 +62,6 @@ test_roundtrip :: proc(t: ^testing.T) {
 }
 
 @(test)
-test_on_get_on_put_nil :: proc(t: ^testing.T) {
-	// on_get and on_put are intentionally nil — not needed here.
-	fp := ex.make_ctor_dtor()
-	testing.expect(t, fp.on_get == nil, "on_get must be nil")
-	testing.expect(t, fp.on_put == nil, "on_put must be nil")
-}
-
-@(test)
 test_dispose_nil_handle :: proc(t: ^testing.T) {
 	// dtor must be safe when called with a nil Maybe value (m^ == nil).
 	fp := ex.make_ctor_dtor()

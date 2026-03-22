@@ -64,7 +64,6 @@ item_dtor :: proc(m: ^Maybe(^item.PolyNode)) {
 }
 
 // make_ctor_dtor returns a Ctor_Dtor for Event + Sensor.
-// on_get and on_put are left nil — not needed here.
 make_ctor_dtor :: proc() -> h.Ctor_Dtor {
 	return h.Ctor_Dtor{ctor = item_ctor, dtor = item_dtor}
 }
