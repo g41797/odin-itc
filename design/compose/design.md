@@ -45,12 +45,6 @@ When editing this document, follow these rules:
 
 ---
 
-
-## Author notes - read, analyze, ask questions, proceed
-
-
----
-
 ## Why Matryoshka.
 
 Because Matryoshka has nested dolls(layers), each complete on its own.
@@ -634,7 +628,7 @@ if pool_get(&p, id, .Available_Or_New, &m) == .Ok {
 ```
 
 Three outcomes when `defer pool_put` fires:
-- `m^ == nil` (item was transferred via `mbox_send`) → `pool_put` is a no-op
+- `m^ == nil` (item was already transferred to another service) → `pool_put` is a no-op
 - `m^ != nil` (item was not transferred) → `pool_put` recycles or `on_put` disposes
 - `m^ != nil` with unknown id or zero id → `pool_put` panics — programming error, surfaces immediately
 
@@ -650,17 +644,17 @@ pool_put_all :: proc(p: ^Pool, m: ^Maybe(^PolyNode))
 
 Walks the linked list starting at `m^`, calling `pool_put` on each node.
 Panics on zero or unknown id in any node (same as `pool_put`).
-Used to drain a chain of items — typically after `mbox_close` returns remaining in-flight items:
+Used to drain a chain of items — typically after a service returns remaining in-flight items:
 
 ```odin
-remaining := mbox_close(&mb)
+nodes, _ := pool_close(&master.pool)
 
 for {
-    raw := list.pop_front(&remaining)
+    raw := list.pop_front(&nodes)
     if raw == nil { break }
     poly := (^PolyNode)(raw)
     m: Maybe(^PolyNode) = poly
-    pool_put(&master.pool, &m)  // if pool closed, m^ stays non-nil — dispose manually
+    pool_put_all(&master.pool, &m)  // pool closed — m^ stays non-nil, dispose manually
 }
 ```
 
@@ -674,7 +668,6 @@ for {
 - `pool_init` reads valid ids from `hooks.ids` — user populates with `append` before calling `pool_init`
 - `pool_put` panics on `id == 0` (open or closed)
 - `pool_put` panics on unknown id only when the pool is **open** — post-close the pool holds no hooks and cannot validate ids; unknown id with closed pool leaves `m^` non-nil
-- `mbox_send` returns `.Invalid` if `m^.id == 0`
 - `on_get` stamps `node.id` at allocation time — `on_get` is one allocator, not the only one; the user sets id
 - Id values are user-defined integer constants — typically from an enum
 
@@ -1129,7 +1122,7 @@ freeMaster(master)
 | R3 | `on_get` is called on every `pool_get` except `Available_Only` when no item stored. | Hook handles both create (`m^==nil`) and reinitialize (`m^!=nil`). |
 | R4 | Pool maintains per-id `in_pool_count`. Passed to `on_get` and `on_put`. | Enables flow control. |
 | R5 | `id == 0` on `pool_put` or `mbox_send` → immediate panic or `.Invalid`. | Programming errors surface immediately, not silently. |
-| R6 | Unknown id on `pool_put` → immediate panic. | Programming errors surface immediately, not silently. |
+| R6 | Unknown id on `pool_put` → **panic** if pool is open. Closed pool: `m^` stays non-nil — caller owns the item. | Panics catch bugs early; closed pool returns ownership cleanly. |
 | R7 | `on_put`: if `m^ != nil` after hook → pool stores it. If `m^ == nil` → pool discards. | Hook sets `m^ = nil` to dispose. |
 | R8 | Always use `ptr, ok := m.?` to read the inner value of `Maybe(^PolyNode)`. Never use the single-value form `ptr := m.?`. | Single-value form panics if nil — in concurrent code that is an unrecoverable crash. |
 | R9 | `ctx` must outlive the pool. Do not tie `ctx` to a stack object or any resource freed before `pool_close`. | Hook called after `ctx` freed → use-after-free. |
@@ -1145,7 +1138,7 @@ freeMaster(master)
 - Pool modes per `pool_get` call
 - Hook dispatch — `on_get` / `on_put` called with `ctx`
 - Guarantee: hooks called outside pool mutex
-- `pool_put` — always sets `m^ = nil` after return (or panics on unknown/zero id)
+- `pool_put` — sets `m^ = nil` after return, or panics on zero id; panics on unknown id only when open
 - `mbox_close` — returns remaining chain as `list.List`, caller must drain
 
 ### You own

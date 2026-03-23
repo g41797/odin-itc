@@ -1,4 +1,4 @@
-![](_logo/horowod_mbox.png)
+![](_logo/DancingMatryoshka.png)
 # Matryoshka — Layered Inter-Thread Communication
 
 One layer at a time. Stop when you have enough.

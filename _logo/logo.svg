@@ -1,0 +1,141 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Dark background disc -->
+  <circle cx="256" cy="256" r="248" fill="#1a1a2e"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.08"/>
+  <circle cx="256" cy="256" r="165" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.05"/>
+
+  <!-- ORBIT GROUP: all dolls + trails rotate together via SMIL -->
+  <g>
+    <animateTransform attributeName="transform" type="rotate"
+      from="0 256 256" to="360 256 256"
+      dur="14s" repeatCount="indefinite"/>
+
+    <!-- Trail arcs between dolls -->
+    <path d="M 256,56 A 200,200 0 0,1 445,171" fill="none" stroke="#FAC775" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.55"/>
+    <path d="M 445,171 A 200,200 0 0,1 378,427" fill="none" stroke="#9FE1CB" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.55"/>
+    <path d="M 378,427 A 200,200 0 0,1 134,427" fill="none" stroke="#AFA9EC" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.55"/>
+    <path d="M 134,427 A 200,200 0 0,1 67,171" fill="none" stroke="#85B7EB" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.55"/>
+    <path d="M 67,171 A 200,200 0 0,1 256,56" fill="none" stroke="#F0997B" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.55"/>
+
+    <!-- Spark dots on trails with SMIL pulse -->
+    <circle cx="366" cy="96" r="4" fill="#FAC775">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="436" cy="305" r="4" fill="#9FE1CB">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
+    </circle>
+    <circle cx="256" cy="460" r="4" fill="#AFA9EC">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
+    </circle>
+    <circle cx="76" cy="305" r="4" fill="#85B7EB">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="0.9s"/>
+    </circle>
+    <circle cx="146" cy="96" r="4" fill="#F0997B">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="1.2s"/>
+    </circle>
+
+    <!-- DOLL 1 (top) — coral, r=200 angle=-90 → 256,56, tilt +8 -->
+    <g transform="translate(256,56) rotate(8)">
+      <ellipse cx="0" cy="10" rx="28" ry="38" fill="#F5C4B3"/>
+      <ellipse cx="0" cy="-24" rx="20" ry="22" fill="#F5C4B3"/>
+      <ellipse cx="0" cy="-22" rx="14" ry="15" fill="#D85A30" opacity="0.15"/>
+      <path d="M -14,-32 Q 0,-48 14,-32" fill="#3d2010"/>
+      <ellipse cx="0" cy="-2" rx="20" ry="6" fill="#D85A30" opacity="0.5"/>
+      <circle cx="0" cy="10" r="9" fill="#D85A30" opacity="0.3"/>
+      <circle cx="0" cy="10" r="5" fill="#993C1D" opacity="0.4"/>
+      <ellipse cx="0" cy="10" rx="28" ry="38" fill="none" stroke="#993C1D" stroke-width="1.5"/>
+      <ellipse cx="0" cy="-24" rx="20" ry="22" fill="none" stroke="#993C1D" stroke-width="1.5"/>
+      <circle cx="-5" cy="-26" r="2" fill="#3d2010"/>
+      <circle cx="5" cy="-26" r="2" fill="#3d2010"/>
+      <circle cx="-9" cy="-21" r="3" fill="#D85A30" opacity="0.35"/>
+      <circle cx="9" cy="-21" r="3" fill="#D85A30" opacity="0.35"/>
+      <path d="M -4,-17 Q 0,-14 4,-17" fill="none" stroke="#993C1D" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+
+    <!-- DOLL 2 (right-upper) — teal, 445,171, tilt -10 -->
+    <g transform="translate(445,171) rotate(-10)">
+      <ellipse cx="0" cy="9" rx="25" ry="34" fill="#9FE1CB"/>
+      <ellipse cx="0" cy="-21" rx="18" ry="20" fill="#9FE1CB"/>
+      <ellipse cx="0" cy="-20" rx="12" ry="13" fill="#1D9E75" opacity="0.12"/>
+      <path d="M -12,-29 Q 0,-44 12,-29" fill="#2a1a04"/>
+      <ellipse cx="0" cy="-2" rx="18" ry="5" fill="#0F6E56" opacity="0.5"/>
+      <circle cx="0" cy="9" r="8" fill="#1D9E75" opacity="0.3"/>
+      <circle cx="0" cy="9" r="4" fill="#0F6E56" opacity="0.4"/>
+      <ellipse cx="0" cy="9" rx="25" ry="34" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+      <ellipse cx="0" cy="-21" rx="18" ry="20" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+      <circle cx="-5" cy="-23" r="2" fill="#2a1a04"/>
+      <circle cx="5" cy="-23" r="2" fill="#2a1a04"/>
+      <circle cx="-8" cy="-18" r="2.5" fill="#0F6E56" opacity="0.35"/>
+      <circle cx="8" cy="-18" r="2.5" fill="#0F6E56" opacity="0.35"/>
+      <path d="M -3,-15 Q 0,-12 3,-15" fill="none" stroke="#0F6E56" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+
+    <!-- DOLL 3 (right-lower) — amber, 378,427, tilt +5 -->
+    <g transform="translate(378,427) rotate(5)">
+      <ellipse cx="0" cy="7" rx="20" ry="28" fill="#FAC775"/>
+      <ellipse cx="0" cy="-17" rx="15" ry="17" fill="#FAC775"/>
+      <ellipse cx="0" cy="-16" rx="10" ry="11" fill="#BA7517" opacity="0.12"/>
+      <path d="M -10,-24 Q 0,-37 10,-24" fill="#2a1a04"/>
+      <ellipse cx="0" cy="-2" rx="14" ry="4.5" fill="#854F0B" opacity="0.5"/>
+      <circle cx="0" cy="7" r="7" fill="#BA7517" opacity="0.3"/>
+      <circle cx="0" cy="7" r="3.5" fill="#854F0B" opacity="0.4"/>
+      <ellipse cx="0" cy="7" rx="20" ry="28" fill="none" stroke="#854F0B" stroke-width="1.5"/>
+      <ellipse cx="0" cy="-17" rx="15" ry="17" fill="none" stroke="#854F0B" stroke-width="1.5"/>
+      <circle cx="-4" cy="-19" r="1.8" fill="#2a1a04"/>
+      <circle cx="4" cy="-19" r="1.8" fill="#2a1a04"/>
+      <circle cx="-7" cy="-15" r="2" fill="#854F0B" opacity="0.35"/>
+      <circle cx="7" cy="-15" r="2" fill="#854F0B" opacity="0.35"/>
+      <path d="M -3,-12 Q 0,-9 3,-12" fill="none" stroke="#854F0B" stroke-width="1" stroke-linecap="round"/>
+    </g>
+
+    <!-- DOLL 4 (left-lower) — purple, 134,427, tilt -6 -->
+    <g transform="translate(134,427) rotate(-6)">
+      <ellipse cx="0" cy="9" rx="25" ry="34" fill="#CECBF6"/>
+      <ellipse cx="0" cy="-21" rx="18" ry="20" fill="#CECBF6"/>
+      <ellipse cx="0" cy="-20" rx="12" ry="13" fill="#7F77DD" opacity="0.12"/>
+      <path d="M -12,-29 Q 0,-44 12,-29" fill="#1a1030"/>
+      <ellipse cx="0" cy="-2" rx="18" ry="5" fill="#534AB7" opacity="0.5"/>
+      <circle cx="0" cy="9" r="8" fill="#7F77DD" opacity="0.3"/>
+      <circle cx="0" cy="9" r="4" fill="#534AB7" opacity="0.4"/>
+      <ellipse cx="0" cy="9" rx="25" ry="34" fill="none" stroke="#534AB7" stroke-width="1.5"/>
+      <ellipse cx="0" cy="-21" rx="18" ry="20" fill="none" stroke="#534AB7" stroke-width="1.5"/>
+      <circle cx="-5" cy="-23" r="2" fill="#1a1030"/>
+      <circle cx="5" cy="-23" r="2" fill="#1a1030"/>
+      <circle cx="-8" cy="-18" r="2.5" fill="#534AB7" opacity="0.35"/>
+      <circle cx="8" cy="-18" r="2.5" fill="#534AB7" opacity="0.35"/>
+      <path d="M -3,-15 Q 0,-12 3,-15" fill="none" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+
+    <!-- DOLL 5 (left-upper) — blue, 67,171, tilt +12 -->
+    <g transform="translate(67,171) rotate(12)">
+      <ellipse cx="0" cy="8" rx="22" ry="31" fill="#B5D4F4"/>
+      <ellipse cx="0" cy="-19" rx="16" ry="18" fill="#B5D4F4"/>
+      <ellipse cx="0" cy="-18" rx="11" ry="12" fill="#378ADD" opacity="0.12"/>
+      <path d="M -11,-27 Q 0,-40 11,-27" fill="#0d1a2e"/>
+      <ellipse cx="0" cy="-2" rx="16" ry="5" fill="#185FA5" opacity="0.5"/>
+      <circle cx="0" cy="8" r="7.5" fill="#378ADD" opacity="0.3"/>
+      <circle cx="0" cy="8" r="3.8" fill="#185FA5" opacity="0.4"/>
+      <ellipse cx="0" cy="8" rx="22" ry="31" fill="none" stroke="#185FA5" stroke-width="1.5"/>
+      <ellipse cx="0" cy="-19" rx="16" ry="18" fill="none" stroke="#185FA5" stroke-width="1.5"/>
+      <circle cx="-4.5" cy="-21" r="1.9" fill="#0d1a2e"/>
+      <circle cx="4.5" cy="-21" r="1.9" fill="#0d1a2e"/>
+      <circle cx="-7.5" cy="-16" r="2.2" fill="#185FA5" opacity="0.35"/>
+      <circle cx="7.5" cy="-16" r="2.2" fill="#185FA5" opacity="0.35"/>
+      <path d="M -3,-13 Q 0,-10 3,-13" fill="none" stroke="#185FA5" stroke-width="1.1" stroke-linecap="round"/>
+    </g>
+
+  </g><!-- /orbit -->
+
+  <!-- Center nested rings — static, represent layered architecture -->
+  <circle cx="256" cy="256" r="30" fill="#1a1a2e" stroke="#FAC775" stroke-width="2" opacity="0.9"/>
+  <circle cx="256" cy="256" r="20" fill="#1a1a2e" stroke="#9FE1CB" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="256" cy="256" r="11" fill="#1a1a2e" stroke="#AFA9EC" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="256" cy="256" r="4" fill="#FAC775" opacity="0.9">
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Outer border -->
+  <circle cx="256" cy="256" r="248" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.12"/>
+
+</svg>
