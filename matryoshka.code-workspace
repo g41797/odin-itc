@@ -11,7 +11,12 @@
         {
             "name": "doll2",
             "path": "dolls/doll2"
+        },
+        {
+            "name": "flat",
+            "path": "flat"
         }
+
     ],
     "settings": {}
 }
