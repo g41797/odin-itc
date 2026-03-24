@@ -182,7 +182,7 @@ An **intrusive** queue puts the link inside your struct:
 With `using poly: PolyNode` at offset 0, your struct *is* the node.
 No wrapper.
 No extra allocation.
-No extra indirection.
+No extra indirection compared to non-intrusive.
 
 ### Services don't know your types
 
@@ -194,15 +194,17 @@ All concrete type knowledge lives in user code.
 `PolyNode.id` tells you the type. It makes the cast safe:
 - Zero is always invalid.
 - Unknown id is a programming error.
-- Known id → safe cast.
+- Known id → you can cast. Correctness is on you.
 
 ### One place at a time
 
 `list.Node` has exactly one `prev` and one `next`.
 Linking an item into two lists at the same time corrupts both.
 An item lives in exactly one place at a time.
-The link structure prevents this.
-No flag needed.
+The link structure makes correct use natural — one `prev`, one `next`, one place.
+But nothing stops you from inserting the same node twice.
+That would corrupt both lists.
+This is discipline, not enforcement.
 
 ---
 
@@ -260,8 +262,14 @@ Two states:
 
 ### Two levels
 
-- **`list.Node`** — the link. One `prev`, one `next`. A node cannot sit in two lists at once.
+- **`list.Node`** — the link. One `prev`, one `next`. If you put a node in two lists, both break.
 - **`Maybe`** — the ownership flag. `nil` = not yours. Non-nil = yours.
+
+**Honest note:** `Maybe` is a convention, not a guarantee.
+Nothing stops you from copying the pointer and using it after transfer.
+Odin has no borrow checker.
+Matryoshka makes ownership visible.
+Following it is on you.
 
 ### Ownership contract
 
@@ -710,8 +718,8 @@ for {
 }
 ```
 
-The cast `(^PolyNode)(raw)` is safe because:
-- Every item has `PolyNode` at offset 0.
+The cast `(^PolyNode)(raw)` works because:
+- Every item has `PolyNode` at offset 0 (your convention).
 - `list.Node` is the first field of `PolyNode`.
 
 Shutdown is part of normal flow.
@@ -1083,7 +1091,7 @@ Remember it.
 
 Pool has many conditions, results, and rules.
 That is not a bug — it is the point.
-Pool tries to prevent almost every wrong combination before it becomes a silent failure.
+Pool tries to catch wrong combinations early — before they become silent failures.
 Pool is strong. Pool saves lives. *(We are serious about the first part.)*
 
 **The rule:** check the result of every API call.
