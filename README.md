@@ -1,13 +1,13 @@
 ![](_logo/DancingMatryoshka.png)
+
 # Matryoshka — Layered Inter-Thread Communication
 
-One layer at a time. Stop when you have enough.
+One layer at a time.
+Stop when you have enough.
 
 [![CI](https://github.com/g41797/matryoshka/actions/workflows/ci.yml/badge.svg)](https://github.com/g41797/matryoshka/actions/workflows/ci.yml)
 
-
 ---
-
 
 ## What changes in your head
 
@@ -20,260 +20,257 @@ Before Matryoshka you think:
 - who frees
 
 With Matryoshka you think:
-- where does this chunk go next
+- where does this go next
 - who owns it right now
-- when do I return it to the pool
+- when do I return it
 
 That is the only real change.
 
 ---
 
-
 ## What Matryoshka really is
 
-- Matryoshka is a set of Russian nesting dolls.
-- Each doll is complete by itself.
-- You open only the dolls you need right now.
+- Matryoshka is a set of Russian dolls.
+- Each doll works by itself.
+- You open only what you need.
 - You stop when you have enough.
-- You go deeper only when the next doll solves a real problem you have today.
-- You never pay for features you do not use.
+
+No hidden system.
+No second model.
+
+---
+
+## The real rule (read this once)
+
+Everything follows one rule:
+
+- Items are `PolyNode`
+- Ownership is `Maybe(^PolyNode)`
+- Movement is Mailbox
+- Reuse is Pool
+
+Later you notice:
+
+- Mailbox is also an item
+- Pool is also an item
+
+Same rules.
+Nothing special.
+
+---
+
+## The smallest possible example
+
+This is the whole system without threads or pools.
+Everything else is just scaling this idea.
+
+```odin
+import list "core:container/intrusive/list"
+import "core:fmt"
+
+PolyNode :: struct {
+    using node: list.Node,
+    id: int,
+}
+
+Chunk :: struct {
+    using poly: PolyNode,
+    value: int,
+}
+
+main :: proc() {
+    q: list.List
+
+    c := new(Chunk)
+    c.id = 1
+    c.value = 42
+
+    m: Maybe(^PolyNode) = (^PolyNode)(c)
+
+    list.push_back(&q, &m.node)
+    m^ = nil
+
+    raw := list.pop_front(&q)
+    if raw == nil { return }
+
+    m^ = (^PolyNode)(raw)
+
+    chunk := (^Chunk)(m^)
+    fmt.println(chunk.value)
+
+    free(chunk)
+    m^ = nil
+}
+````
+
+---
+
+## The same idea with threads (Mailbox)
+
+Now replace the list with a Mailbox.
+Ownership rules stay the same.
+
+```odin
+import "core:thread"
+import "core:fmt"
+
+worker :: proc(arg: rawptr) {
+    mb := (Mailbox)(arg)
+
+    m: Maybe(^PolyNode)
+
+    if mbox_wait_receive(mb, &m) != .Ok {
+        return
+    }
+
+    ptr, ok := m.?
+    if !ok { return }
+
+    chunk := (^Chunk)(ptr)
+    fmt.println(chunk.value)
+
+    free(chunk)
+    m^ = nil
+}
+
+main :: proc() {
+    mb := mbox_new(context.allocator)
+    defer {
+        m: Maybe(^PolyNode) = (^PolyNode)(mb)
+        mbox_close(mb)
+        matryoshka_dispose(&m)
+    }
+
+    t: thread.Thread
+    thread.create(&t, worker, mb)
+
+    c := new(Chunk)
+    c.id = 1
+    c.value = 42
+
+    m: Maybe(^PolyNode) = (^PolyNode)(c)
+
+    if mbox_send(mb, &m) != .Ok {
+        free(c)
+        return
+    }
+
+    thread.join(t)
+}
+```
 
 ---
 
 ## Your four dolls
 
-| Doll | What you get | What you still do not need |
-|------|--------------|----------------------------|
-| 1    | PolyNode + Maybe | everything else |
-| 2    | + Pool (`on_get` / `on_put` hooks) | extended pool, mailbox |
-| 3    | + extended pool (flow control, free-list) | mailbox |
-| 4    | + Mailbox | — full system |
+| Doll | What you get              | What you still do not need |
+| ---- | ------------------------- | -------------------------- |
+| 1    | PolyNode + Maybe          | everything else            |
+| 2    | + Mailbox (movement)      | pool                       |
+| 3    | + Pool (reuse)            | infrastructure as items    |
+| 4    | + Infrastructure as items | — full system              |
 
-**Rule:** open the next doll only because you need it — never because it is there.
+**Rule:** open the next doll only when you feel pain.
 
 ---
 
 ## Doll 1 — PolyNode + Maybe
 
-You only have one struct and one rule.
+One struct.
+One rule.
 
 ```odin
 PolyNode :: struct {
-    using node: list.Node, // link inside your data
-    id:         int,       // 0 is forbidden — tells the type
+    using node: list.Node,
+    id:         int,
 }
 ```
 
-Every item you move must put `using poly: PolyNode` as the very first field.
+Every item embeds it first.
 
 ```odin
 Chunk :: struct {
     using poly: PolyNode,
-    file_id: int,
-    data:    [4096]byte,
+    data: [4096]byte,
 }
 ```
 
-Maybe tracks ownership.
+Ownership:
 
 ```odin
 m: Maybe(^PolyNode)
 ```
 
-- `m^ == nil` → not yours
-- `m^ != nil` → yours — you must give it away or clean it up
+* `m^ == nil` → not yours
+* `m^ != nil` → yours
 
-With only Doll 1 you can already build real things:
+You must:
 
-- intrusive lists in one thread (no extra allocations)
-- simple game entity systems (entities live in one list at a time)
-- single-threaded pipelines (read → process → write)
-- any system where data moves instead of being shared
-
-No locks. No threads yet. Just clean ownership.
+* give it away
+* or clean it up
 
 ---
 
-## Doll 2 — Pool
+## Doll 2 — Mailbox
 
-Now you add recycling.
+Items move between threads.
 
-Pool holds items.
-It never knows your types.
-All smarts live in your hooks.
+* `mbox_send` → ownership leaves you
+* `mbox_wait_receive` → ownership comes to you
+
+You do not share memory.
+You move ownership.
+
+---
+
+## Doll 3 — Pool
+
+Now you reuse items.
 
 ```odin
-PoolHooks :: struct {
-    ctx:    rawptr,
-    ids:    [dynamic]int,  // which item types this pool handles — you fill before pool_init
-    on_get: proc(ctx: rawptr, id: int, count: int, m: ^Maybe(^PolyNode)),
-    on_put: proc(ctx: rawptr, count: int, m: ^Maybe(^PolyNode)),
-}
+on_get:
+- m^ == nil → create
+- m^ != nil → reset
+
+on_put:
+- set m^ = nil → destroy
+- leave m^ → keep
 ```
 
-`on_get` is called on every get.
-- `m^ == nil` — no item available — create a new one
-- `m^ != nil` — recycled item — reinitialize it for reuse
-
-`on_put` decides: keep it or throw it away.
-- set `m^ = nil` to dispose
-- leave `m^` non-nil to store back
-
-You start simple:
-
-```odin
-on_get: if m^ == nil { m^ = new(...) } else { reset(m^) }
-on_put: always leave non-nil  // pool keeps it
-```
-
-Same system as Doll 1, just no leaks.
-
-Later you grow the same hooks:
-
-- count > 400 → dispose (backpressure)
-- use your own arena
-- add stats
-
-Pool code never changes.
-Only your hooks become smarter.
-
-With Doll 1 + 2 you can build:
-
-- compression pipeline (chunks live forever in the pool)
-- game object pool (enemies, bullets, particles)
-- any system that creates and destroys the same shapes again and again
-
-Still one thread. Still no mailbox.
+Start simple.
+Add limits later.
 
 ---
 
-## Doll 3 — Extended Pool
+## Doll 4 — Infrastructure as items
 
-> **Not yet implemented.**
+Mailbox is an item.
+Pool is an item.
 
-Same Pool from Doll 2.
-Add flow control and a free-list per item type.
+* you can send them
+* you can receive them
+* you own them or not
 
-- per-id `in_pool_count` — how many items of this type are idle
-- `on_get` and `on_put` receive the count — your hook uses it for backpressure
-- soft limits without changing pool internals
-
-When your Doll 2 hooks start carrying too much policy logic — open Doll 3.
+Same rules.
 
 ---
 
-## Doll 4 — Mailbox
+## One vocabulary everywhere
 
-> **Not yet implemented.**
-
-Now you add threads.
-
-Mailbox moves items between threads.
-
-One sender thread.
-One receiver thread.
-
-You call:
-
-- `mbox_send` → ownership leaves you
-- `mbox_wait_receive` → ownership comes to you
-
-- It blocks when empty.
-- It wakes when something arrives.
-- Timeout supported.
-- Receiver can be interrupted without touching the sender.
-
-You still use the same Pool from Doll 2.
-
-With all four dolls you can build the full compression example:
-
-Main thread
-- reads file
-- gets chunk from pool
-- sends ==>
-
-Worker thread
-- waits
-- ==> receives
-- compresses
-- sends progress back ==>
-- sends compressed back ==>
-
-Main thread
-- ==> receives progress and updates bar
-- ==> receives data and writes file
-
-No shared arrays.
-No locks in your code.
-Just:
-- "get → fill → send" and
-- "wait → process → put"
+* get
+* fill
+* send
+* receive
+* put back
 
 ---
 
-## How the same system grows
+## Practical notes
 
-Start with Doll 1.
-Make a single-thread game that moves entities in one list.
-
-Open Doll 2.
-Add a pool.
-Now you recycle enemies instead of new/free every time.
-
-Open Doll 3.
-Add flow control to the hooks.
-Now backpressure is one counter check in `on_put`.
-
-Open Doll 4.
-Add one worker thread.
-Now compression runs in the background.
-Mailbox supports safe multithreaded fan-in and fan-out patterns.
-
-Every step uses exactly the same vocabulary:
-
-- get from pool
-- fill
-- send
-- receive
-- put back
-
-Only the hooks grow when you need control.
-Only the mailbox changes when you need speed.
-
----
-
-## Names you can use
-
-We give clear short names so you never guess.
-
-| Concept | Matryoshka name | What it does |
-|---------|-----------------|--------------|
-| queue | Mailbox | moves data between threads |
-| object pool | Pool | recycles your structs |
-| node | PolyNode | the link inside every item |
-| ownership flag | Maybe | tells who owns the item now |
-
-Use these names in your code and comments.
-Everyone on the team will understand.
-
----
-
-## The compression picture (with dolls)
-
-```
-Main (Doll 4)
-  ↓ Chunk (PolyNode)
-Mailbox (Doll 4)
-  ↓
-Worker 1..N
-  ↓ Progress + CompressedChunk
-Mailbox (Doll 4)
-  ↓
-Main (Doll 4)
-```
-
-All items come from one Pool (Doll 2).
-All transfers use Maybe ownership.
+* Use positive ids for your data
+* System uses negative ids
+* Close Mailbox before dispose
+* Do not pool Mailbox or Pool
 
 ---
 
@@ -281,22 +278,31 @@ All transfers use Maybe ownership.
 
 Matryoshka is not a big library.
 
-It is four small complete pieces.
+It is one idea:
 
-You open them one by one.
+* ownership is visible
+* data moves
+* nothing is shared
 
-You speak the same simple words at every level:
+If your code reads like this:
 
-- I get it from the pool.
-- I fill it.
-- I send it.
-- I receive it.
-- I put it back.
+* I get it
+* I fill it
+* I send it
+* I receive it
+* I return it
 
-If that sentence describes your whole program,
-the design works.
+then it works.
 
-That is all.
+---
+
+## Credits
+
+Not serious. But not random either.
+
+- "*?*M" — opened my eyes. Predecessor of `Maybe(^PolyNode)`.
+- [mailbox](https://github.com/g41797/mailbox) — this project started as a port of mailbox to Odin.
+- [tofu](https://github.com/g41797/tofu) — where these ideas were first tested.
 
 ---
 
