@@ -171,13 +171,10 @@ Master blocks on `mb_main`.
 `mb_oob` carries extra data delivered alongside the interrupt.
 Master wakes, drains `mb_oob` in batch.
 
-```
-┌─────────────┐                        ┌─────────────┐
-│  Master A   │                        │  Master B   │
-│             ├── mb_main ◄════════════┤             │
-│             │        (interrupt)     │             ├── inbox ◄═
-│             ├── mb_oob  ◄════════════┤             │
-└─────────────┘                        └─────────────┘
+```mermaid
+graph LR
+    B(Master B) -- mb_main / interrupt --> A(Master A)
+    B -- mb_oob / data --> A
 ```
 
 ```odin
