@@ -65,6 +65,8 @@ Each layer has a **Quick Reference** (API signatures, contracts, tables) and a *
 - [Quick Reference](layer1_quickref.md) — struct shapes, id/offset rules, Maybe contract, Builder signatures
 - [Deep Dive](layer1_deepdive.md) — intrusive explanation, produce/consume examples, addendums (Maybe vs ^^PolyNode)
 
+Concepts from Layer 1 form the fundamental building blocks for all subsequent layers of Matryoshka, providing essential item structure and ownership semantics.
+
 ### Layer 2 — Mailbox + Master
 
 - [Quick Reference](layer2_quickref.md) — Mailbox API, result enums, Master shape
@@ -105,4 +107,4 @@ Each layer has a **Quick Reference** (API signatures, contracts, tables) and a *
 - Per-id count limits — expressed in `on_put`.
 - Byte-level limits — maintain a counter in `ctx`, dispose in `on_put` when over limit.
 - Receiver switch logic and casts.
-- Returning every item — via `pool_put`, `mbox_send`, or `b.dtor`. Disposing manually after close.
+- Returning every item — via `pool_put`, `mbox_send`, or `dtor`. Disposing manually after close.

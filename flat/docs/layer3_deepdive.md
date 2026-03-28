@@ -237,7 +237,7 @@ Same patterns, now with recycling.
 
 Layer 2 sender:\
 ```odin
-m := b.ctor(b.alloc, int(FlowId.Chunk))
+m := ctor(&b, int(FlowId.Chunk))
 // fill
 mbox_send(mb, &m)
 ```
@@ -340,7 +340,7 @@ case .Progress:
 **Why both `defer pool_put` and per-case `pool_put`?**
 
 - Per-case `pool_put` is the normal path — it sets `m^ = nil`.
-- After that, the deferred `pool_put` fires and sees `m^ == nil` — becomes a no-op.
+- After that, the deferred `pool_put` runs and sees `m^ == nil` — becomes a no-op.
 - The `defer` is a safety net for paths you did not anticipate.
 - Belt and suspenders — intentional.
 

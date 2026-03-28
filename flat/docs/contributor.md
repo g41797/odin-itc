@@ -21,7 +21,7 @@ When editing this document, follow these rules:
 
 **Language**
 - Write for non-English developers.
-- No academic words: "semantics", "structural", "contractual", "mechanism", "protocol".
+- Use clear, direct language, avoiding jargon where simpler terms suffice, to ensure accessibility for a global audience.
 - If you would not say it to a colleague at a whiteboard — rewrite it.
 
 **Lists**
@@ -111,6 +111,10 @@ This section is the resume point after `/clear` or a new session.
 - Status: catalog created with all L1/L2/L3/generic advices and status table.
 - Done: L1 advices partly in advices.md (explicit-alloc, defer-cleanup, unknown-id, builder-alloc, drain-list).
 - Next: add remaining L1 advices to advices.md, create `flat/tests/advices/` with L1 tests.
+- L2/L3 advices deferred until that code exists.
+
+---
+emaining L1 advices to advices.md, create `flat/tests/advices/` with L1 tests.
 - L2/L3 advices deferred until that code exists.
 
 ---

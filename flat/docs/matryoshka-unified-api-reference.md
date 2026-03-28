@@ -165,8 +165,8 @@ mbox_interrupt :: proc(mb: Mailbox) -> IntrResult
 // Returns remaining items. Caller must drain.
 mbox_close :: proc(mb: Mailbox) -> list.List
 
-// Non-blocking drain of currently available items.
-try_receive_batch :: proc(mb: Mailbox) -> list.List
+// Non-blocking drain. Returns (.Interrupted, empty) if flag set — clears flag.
+try_receive_batch :: proc(mb: Mailbox) -> (list.List, RecvResult)
 ```
 
 ---
@@ -229,7 +229,7 @@ pool_close :: proc(p: Pool) -> (list.List, ^PoolHooks)
 Pool_Get_Mode :: enum {
     Available_Or_New,  // use stored item or create
     New_Only,          // always create
-    Available_Only,    // stored only — no creation
+    Available_Only,    // stored only — no creation; on_get never called
 }
 
 Pool_Get_Result :: enum {

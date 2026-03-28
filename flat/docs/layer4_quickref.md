@@ -200,7 +200,7 @@ Use only if you know why.
 
 You cannot do this.\
 Do not try to get/put Mailboxes or Pools into a Pool.\
-The Pool will treat them as a "foreign" id and panic.
+If the pool is open, it will treat them as a "foreign" id and panic.
 
 ---
 

@@ -274,7 +274,7 @@ Use only for special control flows.
 
 You cannot do this.\
 Do not try to use Pool's get/put for Mailboxes or Pools.\
-The Pool will treat them as a "foreign" id and panic.
+If the pool is open, it will treat them as a "foreign" id and panic.
 
 ---
 

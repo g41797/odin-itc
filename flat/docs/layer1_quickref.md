@@ -80,9 +80,7 @@ m^ == nil                       m^ != nil
                                      you own this — must transfer, recycle, or dispose
 ```
 
-Two states:
-- `m^ == nil` → not yours.
-- `m^ != nil` → yours. You must give it away or clean it up.
+**Core Ownership Rule:** `m^ == nil` means the item is not yours (e.g., empty or transferred). `m^ != nil` means you own the item and must transfer, recycle, or dispose of it.
 
 ### The Ownership Deal
 

@@ -374,7 +374,8 @@ It puts the rules into the type:
 ptr, ok := m^.?
 ```
 
-It's safe. No panics. `ok` is `false` if `m == nil`.
+`ok` is `false` when the inner value is absent.\
+If `m` itself is nil, `m^` panics before `.?` is reached — that is a programming error.
 
 The single-value form is a trap:
 

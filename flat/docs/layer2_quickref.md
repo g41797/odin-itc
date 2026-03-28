@@ -1,7 +1,7 @@
 # Layer 2 — Mailbox + Master — Quick Reference
 
-> See [Deep Dive](layer2_deepdive.md) for patterns, diagrams, and code examples.\
->\
+> See [Deep Dive](layer2_deepdive.md) for patterns, diagrams, and code examples.
+>
 > **Prerequisite:** [Layer 1](layer1_quickref.md) (PolyNode, Maybe, Builder).
 
 ---
@@ -116,8 +116,8 @@ Result:
 | `.Ok` | `nil` — enqueued, ownership transferred |
 | `.Closed`, `.Invalid` | unchanged — caller still owns |
 
-**Always check the return value.**\
-On non-Ok, the item is still yours.\
+**Always check the return value.**
+On non-Ok, the item is still yours.
 Dispose or retry.
 
 Note: `mbox_send` returns `.Invalid` on `id == 0` — the caller can recover and dispose the item. `pool_put` panics on `id == 0` — a zero id in a pool item is always a programming error and must not be papered over. This asymmetry is intentional.
@@ -164,12 +164,14 @@ Do not proceed.
 mbox_interrupt :: proc(mb: Mailbox) -> IntrResult
 ```
 
-Wakes one Master waiting in `mbox_wait_receive`.\
-The receiver returns `.Interrupted`.
+Sets the interrupted flag on the mailbox.
+Any get call that sees the flag clears it and returns `.Interrupted`.\
+`mbox_wait_receive` — wakes the blocked receiver, returns `.Interrupted`.\
+`try_receive_batch` — returns empty list with `.Interrupted`.
 
-The interrupted flag is **self-clearing**:
-- `mbox_wait_receive` clears it when it returns `.Interrupted`.
-- A subsequent call to `mbox_wait_receive` will block normally.
+The interrupted flag is **self-clearing**.\
+The mailbox clears it on the first get call that sees it.\
+The next get call proceeds normally.
 
 | Result | Meaning |
 |--------|---------|
@@ -177,12 +179,12 @@ The interrupted flag is **self-clearing**:
 | `.Closed` | mailbox is already closed — no effect |
 | `.Already_Interrupted` | flag already set — no effect |
 
-Not every signal carries data.\
+Not every signal carries data.
 Interrupt says "go look".
 
 Think how to communicate *what* changed, this decision is up to you.
 
-One of the possible solutions - to use _second mailbox_ for\
+One of the possible solutions - to use _second mailbox_ for
 transferring "out-of-band" information.
 
 ---
@@ -206,13 +208,20 @@ mbox_close :: proc(mb: Mailbox) -> list.List
 ## try_receive_batch — non-blocking batch drain
 
 ```odin
-try_receive_batch :: proc(mb: Mailbox) -> list.List
+try_receive_batch :: proc(mb: Mailbox) -> (list.List, RecvResult)
 ```
 
+| Result | `list` | Meaning |
+|--------|--------|---------|
+| `.Ok` | items or empty | drained normally |
+| `.Interrupted` | empty | flag was set — cleared now. Call again to drain items. |
+| `.Closed` | empty | mailbox is closed |
+| `.Invalid` | empty | nil handle |
+
 - Non-blocking — never waits.
-- Returns all currently available items as `list.List`.
-- Returns empty list on: nothing available, closed, any error.
-- If mailbox is in interrupted state: returns an empty list immediately and clears the interrupted flag. Available items are NOT drained. To drain after an interrupt, clear the flag first (via the interrupt handler), then call `try_receive_batch` again.
+- On `.Interrupted`: items in the queue are not drained. Call again to drain them.
+
+Mailbox operations like `mbox_interrupt` and `try_receive_batch` are thread-safe and can be called from any thread to interact with the mailbox.
 - Caller owns all items in the returned list.
 
 **What the list contains:**

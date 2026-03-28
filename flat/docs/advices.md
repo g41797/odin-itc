@@ -133,10 +133,10 @@ But when something breaks, you will come back here.
 |---|------|-------------|
 | R1 | `m^` is the ownership bit. Non-nil = you own it. | Double-free or leak. |
 | R2 | All callbacks called outside pool mutex. | Guaranteed by pool. User may hold their own locks inside callbacks. |
-| R3 | `on_get` is called on every `pool_get` except `Available_Only` when no item stored. | Hook handles both create (`m^==nil`) and reinitialize (`m^!=nil`). |
+| R3 | `on_get` is called on every `pool_get` except `Available_Only` — `on_get` is never called for `Available_Only`. | Hook handles both create (`m^==nil`) and reinitialize (`m^!=nil`). |
 | R4 | Pool maintains per-id `in_pool_count`. Passed to `on_get` and `on_put`. | Enables flow control. |
 | R5 | `id == 0` on `pool_put` or `mbox_send` → immediate panic or `.Invalid`. | Programming errors surface immediately. |
-| R6 | Unknown id on `pool_put` → **panic** if pool is open. Closed pool: `m^` stays non-nil — caller owns the item. | Panics catch bugs early; closed pool returns ownership cleanly. |
+| R6 | Unknown id on `pool_put` → **panic** if pool is open. Closed pool: `m^` stays non-nil — caller owns the item. | Panics catch programming errors early when the pool is active (panicking on unknown IDs). When the pool is closed, returning ownership allows for cleaner shutdown, as the pool can no longer manage items or enforce ID validity. Panics catch bugs early; closed pool returns ownership cleanly. |
 | R7 | `on_put`: if `m^ != nil` after hook → pool stores it. If `m^ == nil` → pool discards. | Hook sets `m^ = nil` to dispose. |
 | R8 | Always use `ptr, ok := m.?` to read the inner value of `Maybe(^PolyNode)`. Never use the single-value form `ptr := m.?`. | Single-value form panics if nil. |
 | R9 | `ctx` must outlive the pool. Do not tie `ctx` to a stack object or any resource freed before `pool_close`. | Hook called after `ctx` freed → use-after-free. |

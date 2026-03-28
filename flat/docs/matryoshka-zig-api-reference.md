@@ -169,8 +169,8 @@ pub fn mbox_interrupt(mb: Mailbox) IntrResult
 // Returns remaining items. Caller must drain.
 pub fn mbox_close(mb: Mailbox) list.List
 
-// Non-blocking drain of currently available items.
-pub fn try_receive_batch(mb: Mailbox) list.List
+// Non-blocking drain. Returns (.Interrupted, empty) if flag set — clears flag.
+pub fn try_receive_batch(mb: Mailbox) struct { list.List, RecvResult }
 ```
 
 ---
@@ -233,7 +233,7 @@ pub fn pool_close(p: Pool) struct { list: list.List, hooks: *PoolHooks }
 pub const Pool_Get_Mode = enum {
     Available_Or_New,  // use stored item or create
     New_Only,          // always create
-    Available_Only,    // stored only — no creation
+    Available_Only,    // stored only — no creation; on_get never called
 };
 
 pub const Pool_Get_Result = enum {
@@ -334,4 +334,3 @@ on_put:
 * One teardown → `matryoshka_dispose`
 
 Everything follows the same rules.
-```
