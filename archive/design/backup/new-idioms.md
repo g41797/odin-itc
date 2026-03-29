@@ -123,7 +123,7 @@ One variable. Whole lifetime. Misuse detected at every boundary.
 - `pool_get` — fills `m^` with a fresh or recycled item
 - `mbox_send` — transfers `m^` to mailbox queue, sets `m^ = nil` on success
 - `pool_put` — validates id (panics if unknown), calls on_put hook, then pushes to free-list if m^ != nil. m^ is always nil after return.
-- Call `flow_dispose(ctx, alloc, &m)` to permanently free an item (shutdown, drain, or byte-limit exceeded).
+- Call `flow_dispose(ctx, alloc, &m)` to permanently free an item (shutdown, process remaining, or byte-limit exceeded).
 
 **Result:** One variable, one check, same meaning everywhere.
 
@@ -283,7 +283,7 @@ A mailbox moves a `^PolyNode` from one Master to another. It is type-erased — 
 
 - Sender calls `mbox_send` with `^Maybe(^PolyNode)`. On success, inner pointer becomes nil — transfer complete.
 - Receiver calls `mbox_wait_receive` (blocking) or `mbox_try_receive_batch` (non-blocking). Receiver gets `^PolyNode`, reads `node.id`, casts to concrete type.
-- `mbox_close` atomically empties the queue and returns the head of the remaining list as `^PolyNode`. Caller is forced to drain and dispose — no silent leak possible.
+- `mbox_close` atomically empties the queue and returns the head of the remaining list as `^PolyNode`. Caller is forced to process remaining and dispose — no silent leak possible.
 
 ```odin
 // shutdown — mbox_close returns remaining items, caller drains via flow_dispose
@@ -376,9 +376,9 @@ Where to find this documentation: `design/idioms.md`
 | `defer-put` | scope-exit safety net | Use defer pool_put(&p, &m). Always safe: pool_put always sets m^ = nil (or panics on invalid id). |
 | `dispose-contract` | dispose hook signature | A `dispose` hook takes `(ctx, alloc, ^Maybe(^PolyNode))`. Routes by `id`. Register in `FlowPolicy`. Call directly as `flow_dispose(ctx, alloc, &m)`. |
 | `poly-item` | poly item full lifecycle | Items embed PolyNode at offset 0. Pool allocates per id. Receiver switches on node.id. Every case returns item. |
-| `mbox-close-drain` | drain after close | `mbox_close` returns remaining list. Walk list, call `flow_dispose` on each node. |
+| `mbox-close-process remaining` | process remaining after close | `mbox_close` returns remaining list. Walk list, call `flow_dispose` on each node. |
 | `on-get-hygiene` | `on_get` for hygiene | `on_get` is called on every recycled item. Use it to zero or sanitize the item for reuse. |
-| `dispose-optional` | dispose is advice | For permanent disposal (shutdown or drain), call `flow_dispose(ctx, alloc, &m)` directly. For normal recycle paths, use `pool_put`. |
+| `dispose-optional` | dispose is advice | For permanent disposal (shutdown or process remaining), call `flow_dispose(ctx, alloc, &m)` directly. For normal recycle paths, use `pool_put`. |
 | `heap-master` | heap-allocated master | Heap-allocate the struct that owns ITC participants when shared with spawned threads. |
 | `thread-container` | thread is a container | A thread proc only casts `rawptr` to `^Master`. No ITC participants as stack locals. |
 | `errdefer-dispose` | conditional defer for factory | Use named return + `defer if !ok { dispose(...) }` when a proc creates and returns a master. |
@@ -496,7 +496,7 @@ create_master :: proc() -> (m: ^Master, ok: bool) {
 
 **Problem**: `flow_dispose` is never called automatically by mailbox. Only the caller does it. It is easy to forget.
 
-**Fix**: For permanent disposal (shutdown or drain), call `flow_dispose(ctx, alloc, &m)` directly. For normal recycle paths, use `pool_put`.
+**Fix**: For permanent disposal (shutdown or process remaining), call `flow_dispose(ctx, alloc, &m)` directly. For normal recycle paths, use `pool_put`.
 
 ```odin
 // [itc: dispose-optional]
@@ -619,14 +619,14 @@ pool_put(&p, &m)
 
 ---
 
-### `mbox-close-drain` — drain after close
+### `mbox-close-process remaining` — process remaining after close
 
 **Problem**: `mbox_close` returns remaining items. They must be disposed. Forgetting leaks memory.
 
 **Fix**: Walk the returned list. Call `flow_dispose` on each node.
 
 ```odin
-// [itc: mbox-close-drain]
+// [itc: mbox-close-process remaining]
 head := mbox_close(&mb)
 node := head
 for node != nil {
@@ -637,7 +637,7 @@ for node != nil {
 }
 ```
 
-Use `flow_dispose` (not `pool_put`) in drain loops: during shutdown, items should be destroyed, not recycled into the pool.
+Use `flow_dispose` (not `pool_put`) in process remaining loops: during shutdown, items should be destroyed, not recycled into the pool.
 
 **Why `mbox_close` returns the list?**
 No choice — caller is forced to handle remaining items. Misuse is impossible to ignore.

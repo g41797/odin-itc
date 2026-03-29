@@ -10,7 +10,7 @@ WakeUper is optional. Zero value = no notification on send.
 Stall: try_receive_batch may return an empty list while length > 0.
 This is a property of the Vyukov MPSC queue. Retry on the next call.
 
-Correct drain pattern:
+Correct process remaining pattern:
   batch := try_receive_batch(m)
   for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
       msg := (^T)(node)  // valid only when node is the first field of T (offset 0)

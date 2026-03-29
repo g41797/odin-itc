@@ -16,11 +16,18 @@ test_stub_recycling_explicit :: proc(t: ^testing.T) {
 	q: Queue(_Test_Msg)
 	init(&q)
 	for i in 0 ..< 5 {
-		msg := _Test_Msg{data = i}
+		msg := _Test_Msg {
+			data = i,
+		}
 		msg_opt: Maybe(^_Test_Msg) = &msg
 		push(&q, &msg_opt)
 		got := pop(&q)
-		testing.expectf(t, got != nil && got.data == i, "round %d: pop should return the pushed message", i)
+		testing.expectf(
+			t,
+			got != nil && got.data == i,
+			"round %d: pop should return the pushed message",
+			i,
+		)
 		testing.expectf(t, length(&q) == 0, "round %d: length should be 0 after pop", i)
 	}
 }
@@ -50,8 +57,8 @@ test_pop_all_drains_to_zero :: proc(t: ^testing.T) {
 		}
 	}
 
-	testing.expect(t, count == N, "should drain all pushed messages")
-	testing.expect(t, length(&q) == 0, "length should be 0 after full drain")
+	testing.expect(t, count == N, "should process remaining all pushed messages")
+	testing.expect(t, length(&q) == 0, "length should be 0 after full process remaining")
 }
 
 // _Stress_Ctx passes queue and message slice to each producer thread.
@@ -61,7 +68,7 @@ _Stress_Ctx :: struct {
 	msgs: []_Test_Msg,
 }
 
-_STRESS_PRODUCERS      :: 10
+_STRESS_PRODUCERS :: 10
 _STRESS_ITEMS_PER_PROD :: 1000
 
 // test_concurrent_push_stress runs _STRESS_PRODUCERS threads each pushing
@@ -91,15 +98,12 @@ test_concurrent_push_stress :: proc(t: ^testing.T) {
 	defer delete(threads)
 
 	for i in 0 ..< _STRESS_PRODUCERS {
-		th := thread.create_and_start_with_poly_data(
-			&ctxs[i],
-			proc(ctx: ^_Stress_Ctx) {
-				for j in 0 ..< len(ctx.msgs) {
-					msg_opt: Maybe(^_Test_Msg) = &ctx.msgs[j]
-					push(ctx.q, &msg_opt)
-				}
-			},
-		)
+		th := thread.create_and_start_with_poly_data(&ctxs[i], proc(ctx: ^_Stress_Ctx) {
+			for j in 0 ..< len(ctx.msgs) {
+				msg_opt: Maybe(^_Test_Msg) = &ctx.msgs[j]
+				push(ctx.q, &msg_opt)
+			}
+		})
 		append(&threads, th)
 	}
 
@@ -117,7 +121,7 @@ test_concurrent_push_stress :: proc(t: ^testing.T) {
 	}
 
 	testing.expect(t, received == total, "should receive all pushed messages")
-	testing.expect(t, length(&q) == 0, "length should be 0 after full drain")
+	testing.expect(t, length(&q) == 0, "length should be 0 after full process remaining")
 }
 
 // test_length_consistency verifies that after a concurrent stress run

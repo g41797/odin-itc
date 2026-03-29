@@ -1,9 +1,9 @@
 //+test
 package nbio_mbox_tests
 
-import nbio_mbox "../../nbio_mbox"
-import loop_mbox "../../loop_mbox"
 import examples "../../examples"
+import loop_mbox "../../loop_mbox"
+import nbio_mbox "../../nbio_mbox"
 import list "core:container/intrusive/list"
 import "core:nbio"
 import "core:sync"
@@ -205,7 +205,7 @@ test_nbio_burst_multiproducer :: proc(t: ^testing.T) {
 	_test_nbio_burst_multiproducer(t, .UDP)
 }
 
-// _test_nbio_pool_constancy: 10 rounds of 1,000 sends + full drain.
+// _test_nbio_pool_constancy: 10 rounds of 1,000 sends + full process remaining.
 // Verifies no memory growth (tracking allocator catches leaks between rounds).
 @(private)
 _test_nbio_pool_constancy :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kind) {
@@ -373,7 +373,7 @@ _test_nbio_late_arrival :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		}
 	}
 	if got_b == nil {
-		// Final fallback drain (B is guaranteed in queue after join).
+		// Final fallback process remaining (B is guaranteed in queue after join).
 		fb := loop_mbox.try_receive_batch(m)
 		node := list.pop_front(&fb)
 		if node != nil {got_b = (^examples.Itm)(node)}

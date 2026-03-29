@@ -24,6 +24,10 @@ All items — user data and infrastructure — embed this first.
 
 ### MayItem
 
+```odin
+MayItem :: Maybe(^PolyNode)
+```
+
 The ownership handle.
 
 * `m^ == nil` → not yours
@@ -121,7 +125,7 @@ Moves ownership between threads.
 ### Handle
 
 ```odin
-Mailbox :: distinct ^PolyNode
+Mailbox :: ^PolyNode
 ```
 
 ---
@@ -148,7 +152,7 @@ RecvResult :: enum {
 
 mbox_wait_receive :: proc(
     mb: Mailbox,
-    out: ^MayItem,
+    m: ^MayItem,
     timeout: time.Duration = -1,
 ) -> RecvResult
 
@@ -162,10 +166,10 @@ mbox_interrupt :: proc(mb: Mailbox) -> IntrResult
 
 // Marks mailbox closed.
 // Wakes all waiters.
-// Returns remaining items. Caller must drain.
+// Returns remaining items. Caller must process remaining.
 mbox_close :: proc(mb: Mailbox) -> list.List
 
-// Non-blocking drain. Returns (.Interrupted, empty) if flag set — clears flag.
+// Non-blocking recv. Returns (.Interrupted, empty) if flag set — clears flag.
 try_receive_batch :: proc(mb: Mailbox) -> (list.List, RecvResult)
 ```
 
@@ -206,7 +210,7 @@ Provides reuse and policy.
 ### Handle
 
 ```odin
-Pool :: distinct ^PolyNode
+Pool :: ^PolyNode
 ```
 
 ---

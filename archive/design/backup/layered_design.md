@@ -711,7 +711,7 @@ mbox_close :: proc(mb: ^Mailbox) -> list.List
 - Returns all items still in the queue as a `list.List`.
 - Returns an empty list if already closed — idempotent.
 
-**Caller must drain the returned list.**
+**Caller must process remaining the returned list.**
 
 Walk via `list.pop_front`.
 Cast each `^list.Node` to `^PolyNode`.
@@ -737,7 +737,7 @@ Shutdown is part of normal flow.
 
 ---
 
-## try_receive_batch — non-blocking batch drain
+## try_receive_batch — non-blocking batch process remaining
 
 ```odin
 try_receive_batch :: proc(mb: ^Mailbox) -> list.List
@@ -806,7 +806,7 @@ newMaster :: proc(alloc: mem.Allocator) -> ^Master {
 
 freeMaster :: proc(master: ^Master) {
     remaining := mbox_close(&master.inbox)
-    // drain remaining items...
+    // process remaining remaining items...
     mbox_destroy(&master.inbox)
     alloc := master.alloc
     free(master, alloc)
@@ -1130,7 +1130,7 @@ Do not retry the same mistake.
 | `pool_get` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_get_wait` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_put` | nothing | `m^` is `nil` after the call — pool took it |
-| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — drain the returned list |
+| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — process remaining the returned list |
 
 For `pool_put`: if `m^` is still non-nil after the call, the pool is closed.
 You own the item.
@@ -1547,7 +1547,7 @@ freeMaster :: proc(master: ^Master) {
     // 1. close pool — get back stored items
     nodes, _ := pool_close(&master.pool)
 
-    // 2. drain and dispose all returned items
+    // 2. process remaining and dispose all returned items
     // NOTE: dispose nodes before freeing other Master resources.
     for {
         raw := list.pop_front(&nodes)
@@ -1555,9 +1555,9 @@ freeMaster :: proc(master: ^Master) {
         // dispose node — master knows how
     }
 
-    // 3. close and drain mailbox
+    // 3. close and process remaining mailbox
     remaining := mbox_close(&master.inbox)
-    // drain remaining...
+    // process remaining remaining...
     mbox_destroy(&master.inbox)
 
     // 4. delete ids dynamic array (user-owned)
@@ -1807,7 +1807,7 @@ But when something breaks, you will come back here.
 - Guarantee: hooks called outside pool mutex.
 - `pool_put` — sets `m^ = nil` after return, or panics on zero id.
 - Panics on unknown id only when open.
-- `mbox_close` — returns remaining chain as `list.List`. Caller must drain.
+- `mbox_close` — returns remaining chain as `list.List`. Caller must process remaining.
 
 ## You own
 

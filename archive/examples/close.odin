@@ -11,11 +11,11 @@ _Close_Master :: struct {
 }
 
 @(private)
-_close_dispose :: proc(m: ^Maybe(^_Close_Master)) { // [itc: dispose-contract]
+_close_dispose :: proc(m: ^Maybe(^_Close_Master)) { 	// [itc: dispose-contract]
 	mp, ok := m.?
-	if !ok || mp == nil { return }
+	if !ok || mp == nil {return}
 
-	// Final drain: after close, all returned items need dispose.
+	// Final process remaining: after close, all returned items need dispose.
 	// Demonstrating Idiom 8: dispose-optional
 	remaining, _ := mbox.close(&mp.mb)
 	for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&remaining) {
@@ -35,12 +35,16 @@ close_example :: proc() -> bool {
 
 	// --- Part 1: close() wakes a blocked waiter ---
 	err_result: mbox.Mailbox_Error
-	t := thread.create_and_start_with_poly_data2(&m.mb, &err_result, proc(mb: ^mbox.Mailbox(Itm), res: ^mbox.Mailbox_Error) {
+	t := thread.create_and_start_with_poly_data2(
+	&m.mb,
+	&err_result,
+	proc(mb: ^mbox.Mailbox(Itm), res: ^mbox.Mailbox_Error) {
 		// [itc: thread-container] (mb is part of heap-master)
 		m_itm: Maybe(^Itm)
 		res^ = mbox.wait_receive(mb, &m_itm)
 		_itm_dispose(&m_itm)
-	})
+	},
+	)
 
 	// Wait for the thread to enter wait_receive.
 	time.sleep(10 * time.Millisecond)

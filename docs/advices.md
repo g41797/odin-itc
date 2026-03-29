@@ -63,7 +63,7 @@ Use `defer` for cleanup that must happen on all exit paths.
 
 ### Collection cleanup
 
-When building a collection in a loop, set up a defer drain at the start.
+When building a collection in a loop, set up a defer process remaining at the start.
 If an allocation fails mid-loop, the defer cleans up everything already added.
 
 <!-- snippet: examples/layer1/produce_consume.odin:32-33 -->
@@ -72,7 +72,7 @@ If an allocation fails mid-loop, the defer cleans up everything already added.
 defer drain_list(&l, alloc)
 ```
 
-The drain helper pops and frees all items by id:
+The process remaining helper pops and frees all items by id:
 
 <!-- snippet: examples/layer1/produce_consume.odin:8-23 -->
 ```odin
@@ -89,7 +89,7 @@ drain_list :: proc(l: ^list.List, alloc: mem.Allocator) {
         case .Sensor:
             free((^Sensor)(poly), alloc)
         case:
-            panic("drain: unknown id")
+            panic("process remaining: unknown id")
         }
     }
 }
@@ -113,7 +113,7 @@ Return `nil` for unknown id.
 Unknown id at allocation time is a caller mistake — maybe a wrong constant, maybe a missing enum case.
 Returning nil lets the caller handle it the same way as allocation failure.
 
-### Deallocation (dtor, free, drain)
+### Deallocation (dtor, free, process remaining)
 
 Panic on unknown id.
 If you are freeing an item with an unknown id, the item should never have existed.

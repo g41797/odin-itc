@@ -42,7 +42,7 @@ defer {
 // sender thread (any thread):
 loop_mbox.send(m, msg)
 
-// event-loop thread — drain in the tick loop:
+// event-loop thread — process remaining in the tick loop:
 for {
     nbio.tick(timeout)
     batch := loop_mbox.try_receive_batch(m)

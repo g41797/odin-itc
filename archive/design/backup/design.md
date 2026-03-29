@@ -413,7 +413,7 @@ If it is not ok — fix the root cause. Do not retry the same mistake.
 | `pool_get` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_get_wait` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_put` | nothing | `m^` is `nil` after the call — pool took it |
-| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — drain the returned list |
+| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — process remaining the returned list |
 
 For `pool_put`: if `m^` is still non-nil after the call, the pool is closed — you own the item, dispose manually.
 For `pool_get` / `pool_get_wait`: any result other than `.Ok` has a specific meaning — see the result table below.
@@ -650,7 +650,7 @@ pool_put_all :: proc(p: ^Pool, m: ^Maybe(^PolyNode))
 
 Walks the linked list starting at `m^`, calling `pool_put` on each node.
 Panics on zero or unknown id in any node (same as `pool_put`).
-Used to drain a chain of items — typically after a service returns remaining in-flight items:
+Used to process remaining a chain of items — typically after a service returns remaining in-flight items:
 
 ```odin
 nodes, _ := pool_close(&master.pool)
@@ -1005,7 +1005,7 @@ mbox_close :: proc(mb: ^Mailbox) -> list.List
 - Returns all items still in the queue as a `list.List`.
 - Returns an empty list if already closed — idempotent.
 
-**Caller must drain the returned list.**
+**Caller must process remaining the returned list.**
 Walk via `list.pop_front`, cast each `^list.Node` to `^PolyNode`, dispose:
 
 ```odin
@@ -1026,7 +1026,7 @@ The cast `(^PolyNode)(raw)` is safe because:
 
 ---
 
-### try_receive_batch — non-blocking batch drain
+### try_receive_batch — non-blocking batch process remaining
 
 ```odin
 try_receive_batch :: proc(mb: ^Mailbox) -> list.List
@@ -1161,7 +1161,7 @@ case .Progress:
 ### Shutdown
 
 ```odin
-// Sender side — close mailbox, drain remaining in-flight items
+// Sender side — close mailbox, process remaining remaining in-flight items
 remaining := mbox_close(&mb)
 
 for {
@@ -1208,7 +1208,7 @@ freeMaster(master)
 - Hook dispatch — `on_get` / `on_put` called with `ctx`
 - Guarantee: hooks called outside pool mutex
 - `pool_put` — sets `m^ = nil` after return, or panics on zero id; panics on unknown id only when open
-- `mbox_close` — returns remaining chain as `list.List`, caller must drain
+- `mbox_close` — returns remaining chain as `list.List`, caller must process remaining
 
 ### You own
 

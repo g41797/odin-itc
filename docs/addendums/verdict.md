@@ -177,7 +177,7 @@ Undefined.
 
 Define clearly:
 
-- drain?
+- process remaining?
 - reject?
 - destroy?
 - return to sender?
@@ -213,7 +213,7 @@ Layer 4:
 
 ```
 
-Mailbox :: distinct ^PolyNode
+Mailbox :: ^PolyNode
 
 ```
 

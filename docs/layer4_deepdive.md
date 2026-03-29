@@ -56,8 +56,8 @@ User never sees `_Mbox` or `_Pool`.
 Hide internals with `distinct`.
 
 ```odin
-Mailbox :: distinct ^PolyNode
-Pool    :: distinct ^PolyNode
+Mailbox :: ^PolyNode
+Pool    :: ^PolyNode
 ```
 
 User works with `Mailbox` and `Pool`.
@@ -306,7 +306,7 @@ Example:
 m: MayItem = (^PolyNode)(mb)
 
 remaining := mbox_close(mb)
-// drain remaining first
+// process remaining remaining first
 
 matryoshka_dispose(&m)
 mb = nil  // mb is now dangling — zero it

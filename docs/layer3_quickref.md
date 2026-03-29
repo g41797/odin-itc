@@ -167,7 +167,7 @@ All lifecycle decisions live in `PoolHooks`.
 ### Types
 
 ```odin
-Pool :: distinct ^PolyNode
+Pool :: ^PolyNode
 
 Pool_Get_Mode :: enum {
     Available_Or_New,  // existing item if available, otherwise create

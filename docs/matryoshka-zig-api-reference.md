@@ -1,6 +1,6 @@
 # matryoshka — Unified API Reference (Zig 0.15.2)
 
-> One ownership model for everything.  
+> One ownership model for everything.
 > Data and infrastructure follow the same rules.
 
 ---
@@ -30,7 +30,7 @@ The ownership handle.
 pub const Maybe = ?*PolyNode;
 ```
 
-* `m.* == null` → not yours  
+* `m.* == null` → not yours
 * `m.* != null` → yours
 
 You must:
@@ -42,7 +42,7 @@ You must:
 
 ## ID Rules
 
-One field.  
+One field.
 Two ranges.
 
 ```zig
@@ -70,7 +70,7 @@ User must not use negative ids.
 
 No central factory.
 
-Create directly.  
+Create directly.
 Dispose through one entry.
 
 All infrastructure items store their allocator internally.
@@ -166,10 +166,10 @@ pub fn mbox_interrupt(mb: Mailbox) IntrResult
 
 // Marks mailbox closed.
 // Wakes all waiters.
-// Returns remaining items. Caller must drain.
+// Returns remaining items. Caller must process remaining.
 pub fn mbox_close(mb: Mailbox) list.List
 
-// Non-blocking drain. Returns (.Interrupted, empty) if flag set — clears flag.
+// Non-blocking process remaining. Returns (.Interrupted, empty) if flag set — clears flag.
 pub fn try_receive_batch(mb: Mailbox) struct { list.List, RecvResult }
 ```
 

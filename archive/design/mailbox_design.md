@@ -137,7 +137,7 @@ sync.cond_signal(&m.cond)   // wake next waiter if more messages remain
 
 ### API
 - `send_to_loop(msg)` — adds message, calls `nbio.wake_up`.
-- `try_receive_loop()` — returns one message. Never blocks. Call in a loop to drain.
+- `try_receive_loop()` — returns one message. Never blocks. Call in a loop to process remaining.
 - `close_loop()` — blocks new sends, calls `nbio.wake_up` once. Returns `(list.List, bool)` — remaining messages and whether this was the first close.
 - `stats()` — message count. Not locked.
 

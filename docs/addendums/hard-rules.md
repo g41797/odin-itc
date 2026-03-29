@@ -140,7 +140,7 @@ Before disposing:
 
 1. stop producers
 2. stop consumers
-3. drain or destroy remaining items
+3. process remaining or destroy remaining items
 4. call `mbox_close`
 
 Undefined behavior if items remain unhandled.

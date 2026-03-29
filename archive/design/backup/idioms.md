@@ -126,7 +126,7 @@ Thread A                    Thread B
        │                             ├─ use Item
        │                             └─ Pool.put ──► Pool (reset/dispose)
        │
-       └─ on shutdown: Mbox.close → drain → Pool.destroy
+       └─ on shutdown: Mbox.close → process remaining → Pool.destroy
 ```
 
 Lifecycle of a disposable item:
@@ -348,7 +348,7 @@ create_master :: proc() -> (m: ^Master, ok: bool) {
 
 **Problem**: The pool and mailbox do not call `dispose`. Only the caller does. It is easy to forget.
 
-**Fix**: Use `defer` (`defer-dispose`) or manual drain loops to call `dispose` when an item leaves the system permanently.
+**Fix**: Use `defer` (`defer-dispose`) or manual process remaining loops to call `dispose` when an item leaves the system permanently.
 
 ```odin
 // [itc: dispose-optional]

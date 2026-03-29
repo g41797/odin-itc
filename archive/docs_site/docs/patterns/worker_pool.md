@@ -9,4 +9,4 @@ Describe the worker pool idiom for bounded parallel processing.
 - Pool structure and sizing
 - Task distribution strategy
 - Result collection
-- Shutdown and drain sequence
+- Shutdown and process remaining sequence

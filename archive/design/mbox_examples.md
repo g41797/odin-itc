@@ -99,7 +99,7 @@ Note: for this pattern, `mb` is `mbox.Mailbox(Envelope)`.
 ## 3. "Graceful" shutdown
 
 ```odin
-// Sender signals shutdown (capture remaining if drain is needed — see Pattern 8):
+// Sender signals shutdown (capture remaining if process remaining is needed — see Pattern 8):
 _, _ = mbox.close(&mb)
 
 // Receiver checks for it:
@@ -167,7 +167,7 @@ if reply != nil {
     free(reply.?) // worker frees what it allocated
 }
 
-// nbio loop — drain on wake, reuse received message as reply:
+// nbio loop — process remaining on wake, reuse received message as reply:
 for {
     req, ok := mbox.try_receive_loop(&loop_mb)
     if !ok { break }
@@ -251,9 +251,9 @@ While a message is queued, the mailbox owns the node.
 To reuse after close (after all waiters have exited):
 
 ```odin
-// 1. Close and drain remaining messages.
+// 1. Close and process remaining remaining messages.
 remaining, _ := mbox.close(&mb)
-// drain remaining...
+// process remaining remaining...
 
 // 2. Wait for all threads that were using this mailbox to exit.
 
@@ -339,7 +339,7 @@ Rules:
 
 One struct owns the pool and the mailbox. One shutdown call handles everything.
 
-Key rule: drain the mailbox BEFORE destroying the pool.
+Key rule: process remaining the mailbox BEFORE destroying the pool.
 If you destroy the pool first, the messages still in the mailbox become dangling pointers.
 
 ```odin

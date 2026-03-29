@@ -90,7 +90,7 @@ No change needed. Documented and closed.
 - `test_stub_recycling_explicit` — 5 single-item push/pop cycles; recycling path exercised each time
 - `test_pop_all_drains_to_zero` — push 50, pop all, length == 0
 - `test_concurrent_push_stress` — 10 producers × 1000 items, 1 consumer; all 10,000 received
-- `test_length_consistency` — push 200, verify length == 200, drain, verify length == 0
+- `test_length_consistency` — push 200, verify length == 200, process remaining, verify length == 0
 
 ---
 
@@ -243,7 +243,7 @@ Updated comment in `try_mbox/mbox.odin`.
 
 ### §11 — close: no stall retry
 
-`close` calls `mpsc.pop` in a drain loop until nil. No retry.
+`close` calls `mpsc.pop` in a process remaining loop until nil. No retry.
 
 Precondition: all senders have stopped (threads joined). After a thread is joined,
 its push is complete — both the atomic exchange and the next-pointer write are done.
@@ -251,7 +251,7 @@ No stall window can be open.
 
 Updated comment in `try_mbox/mbox.odin`.
 
-### try_receive_all — batch drain
+### try_receive_all — batch process remaining
 
 New proc `try_receive_all` in `try_mbox/mbox.odin`. Drains all available messages
 into a `list.List` in one call. Returns an empty list on stall or empty queue.
@@ -357,7 +357,7 @@ This is wrong: callers should not know about internal callback state.
 
 Correct location: `_nbio_close`, in the `else` branch:
 - If `atomic_add(-1) == 1`: no pending callback → free immediately.
-- Else: a `_noop_clear` is pending → call `nbio.tick(0)` to drain it → it frees state.
+- Else: a `_noop_clear` is pending → call `nbio.tick(0)` to process remaining it → it frees state.
 
 `_nbio_close` runs on the event-loop thread (guaranteed: `nbio.remove` panics cross-thread),
 so `nbio.tick(0)` is always on the correct thread.

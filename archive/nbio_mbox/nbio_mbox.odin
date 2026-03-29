@@ -48,7 +48,7 @@ Nbio_Mailbox_Error :: enum {
 // crashes under aggressive optimisation. Without the keepalive, tick() returns
 // immediately when no other operations are outstanding, so the consumer loop
 // busy-polls try_receive_batch between tick calls. This is safe and correct;
-// tests must join the sender thread before the final drain on Windows.
+// tests must join the sender thread before the final process remaining on Windows.
 @(private)
 _NBio_State :: struct {
 	loop:      ^nbio.Event_Loop,
@@ -185,7 +185,7 @@ _udp_close :: proc(ctx: rawptr) {
 			nbio.remove(state.recv_op)
 			state.recv_op = nil
 		}
-		nbio.tick(0) // drain IOCP completion before freeing state.recv_buf
+		nbio.tick(0) // process remaining IOCP completion before freeing state.recv_buf
 	} else {
 		// Remove before close: kqueue auto-removes events on fd close, so
 		// nbio.remove must run first to avoid EV_DELETE on a stale filter.

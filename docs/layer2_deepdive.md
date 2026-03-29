@@ -95,7 +95,7 @@ newMaster :: proc(alloc: mem.Allocator) -> ^Master {
 
 freeMaster :: proc(master: ^Master) {
     remaining := mbox_close(master.inbox)
-    // drain remaining items...
+    // process remaining remaining items...
 
     // teardown mailbox
     m_mb: MayItem = (^PolyNode)(master.inbox)
@@ -167,7 +167,7 @@ sequenceDiagram
     participant A as Master A
     B->>A: mb_oob — send data items
     B->>A: mb_main — interrupt
-    A->>A: .Interrupted — drain mb_oob
+    A->>A: .Interrupted — process remaining mb_oob
 ```
 
 **Receiver loop — what happens on each result:**
@@ -177,7 +177,7 @@ flowchart TD
     W([mbox_wait_receive mb_main]) --> Ok[".Ok<br/>handle message"]
     W --> Int[.Interrupted]
     W --> Cl[".Closed<br/>return"]
-    Int --> D["try_receive_batch mb_oob<br/>drain batch"]
+    Int --> D["try_receive_batch mb_oob<br/>process remaining batch"]
     Ok --> W
     D --> W
 ```

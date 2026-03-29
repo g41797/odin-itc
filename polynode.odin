@@ -36,9 +36,8 @@ MayItem :: Maybe(^PolyNode)
 //   m^ != nil   →  you own it — must transfer, recycle, or dispose
 //   m  == nil   →  nil handle — invalid; API returns error
 //
-// Two levels of structural safety:
-//   list.Node  — structural: one prev/next; a node cannot be in two queues at once.
-//   MayItem    — contractual: nil/non-nil tells every API who holds the item.
+//   list.Node  — one prev/next; a node cannot be in two queues/containers at once.
+//   MayItem    — nil/non-nil tells every API who holds the item.
 PolyNode :: struct {
 	using node: list.Node, // intrusive link — .prev, .next
 	id:         int, // type discriminator, must be != 0

@@ -103,7 +103,7 @@ Your struct is orthogonal to the transport.
 | `Mailbox($T)` | mutex + condition | any worker thread |
 | `loop_mbox.Mbox($T)` | WakeUper | event-loop thread only |
 
-Same ownership idioms. Same drain-on-close contract. Different wait.
+Same ownership idioms. Same process remaining-on-close contract. Different wait.
 
 ### What is NOT orthogonal (by design)
 

@@ -184,11 +184,11 @@ mbox_close :: proc(mb: ^Mailbox) -> list.List
 - Returns all items still in the queue as a `list.List`.
 - Returns an empty list if already closed — idempotent.
 
-**Caller must drain the returned list.**
+**Caller must process remaining the returned list.**
 
 ---
 
-## try_receive_batch — non-blocking batch drain
+## try_receive_batch — non-blocking batch process remaining
 
 ```odin
 try_receive_batch :: proc(mb: ^Mailbox) -> list.List

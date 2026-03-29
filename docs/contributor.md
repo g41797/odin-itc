@@ -109,7 +109,7 @@ This section is the resume point after `/clear` or a new session.
 
 **Advice catalog** — [advice_catalog.md](advice_catalog.md)
 - Status: catalog created with all L1/L2/L3/generic advices and status table.
-- Done: L1 advices partly in advices.md (explicit-alloc, defer-cleanup, unknown-id, builder-alloc, drain-list).
+- Done: L1 advices partly in advices.md (explicit-alloc, defer-cleanup, unknown-id, builder-alloc, process remaining-list).
 - Next: add remaining L1 advices to advices.md, create `flat/tests/advices/` with L1 tests.
 - L2/L3 advices deferred until that code exists.
 

@@ -78,7 +78,7 @@ S: Of course.
 
 R: Then I'll send a ByeRequest item on the return mbox. The item will carry
    the same information. You'll send me a ByeResponse item on the forward mbox.
-   After that my Worker Master will drain and exit.
+   After that my Worker Master will process remaining and exit.
 
 S: That's enough for today. I'll save the item-type list in Git.
 

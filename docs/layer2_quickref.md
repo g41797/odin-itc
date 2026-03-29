@@ -60,7 +60,7 @@ It releases ownership to the receiver on success.
 ### Types
 
 ```odin
-Mailbox :: distinct ^PolyNode
+Mailbox :: ^PolyNode
 
 SendResult :: enum {
     Ok,

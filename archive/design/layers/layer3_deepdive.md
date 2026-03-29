@@ -147,7 +147,7 @@ freeMaster :: proc(master: ^Master) {
     // 1. close pool — get back stored items
     nodes, _ := pool_close(&master.pool)
 
-    // 2. drain and dispose all returned items
+    // 2. process remaining and dispose all returned items
     // NOTE: dispose nodes before freeing other Master resources.
     for {
         raw := list.pop_front(&nodes)
@@ -155,9 +155,9 @@ freeMaster :: proc(master: ^Master) {
         // dispose node — master knows how
     }
 
-    // 3. close and drain mailbox
+    // 3. close and process remaining mailbox
     remaining := mbox_close(&master.inbox)
-    // drain remaining...
+    // process remaining remaining...
     mbox_destroy(&master.inbox)
 
     // 4. delete ids dynamic array (user-owned)

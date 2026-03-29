@@ -39,7 +39,7 @@ Key points:
 
 ---
 
-## Close — drain example
+## Close — process remaining example
 
 Walk via `list.pop_front`.
 Cast each `^list.Node` to `^PolyNode`.
@@ -94,7 +94,7 @@ newMaster :: proc(alloc: mem.Allocator) -> ^Master {
 
 freeMaster :: proc(master: ^Master) {
     remaining := mbox_close(&master.inbox)
-    // drain remaining items...
+    // process remaining remaining items...
     mbox_destroy(&master.inbox)
     alloc := master.alloc
     free(master, alloc)

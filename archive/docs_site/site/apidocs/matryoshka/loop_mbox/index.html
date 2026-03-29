@@ -122,7 +122,7 @@
 				<div class="odin-search-key">/</div>
 			</div>
 		</div>
-	
+
 <div id="odin-search-info">
 <div id="odin-search-time"></div>
 
@@ -142,7 +142,7 @@ Multiple producers call send concurrently. One consumer calls try_receive_batch.
 WakeUper is optional. Zero value = no notification on send.</p>
 <p>Stall: try_receive_batch may return an empty list while length &gt; 0.
 This is a property of the Vyukov MPSC queue. Retry on the next call.</p>
-<p>Correct drain pattern:
+<p>Correct process remaining pattern:
   batch := try_receive_batch(m)
   for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
       msg := (^T)(node)  // valid only when node is the first field of T (offset 0)
@@ -256,7 +256,7 @@ T must have a field named "node" of type list.Node.</p>
 <summary class="hideme"><span>&nbsp;</span></summary>
 <p>close marks the mailbox closed, calls waker.close, and drains remaining messages.
 Returns (remaining, true) on first call; ({}, false) if already closed.
-Caller must drain the returned list — free heap messages or return to pool.
+Caller must process remaining the returned list — free heap messages or return to pool.
 Must be called from the consumer thread — drains with mpsc.pop (single-consumer).
 Precondition: all senders have stopped (threads joined). After that, no stall
 window can be active — each sender's push (atomic exchange + next-pointer write)
@@ -321,7 +321,7 @@ Safe to call from multiple threads.</p>
 <p>try_receive_batch pops all available messages without blocking. Single-consumer only.
 Returns an empty list if the queue is empty or in stall state.
 On stall: some in-flight messages may not appear — caller retries on the next tick.</p>
-<p>Correct drain pattern:
+<p>Correct process remaining pattern:
   batch := try_receive_batch(m)
   for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
       msg := (^T)(node)  // valid only when node is the first field of T (offset 0)

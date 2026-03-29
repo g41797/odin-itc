@@ -26,10 +26,10 @@ Tag rule: `[itc: tag]` only if it references matryoshka API. No tag for generic 
 | `two-value-unwrap` | Safe unwrap | Always `ptr, ok := m.?`. Never `ptr := m.?` (panics if nil). |
 | `one-place` | One place at a time | Never insert same node in two lists. One `prev`, one `next`, one place. |
 | `unknown-id-alloc` | Unknown id on alloc | `ctor`/`new` for unknown id → return `nil`. Same handling as allocation failure. |
-| `unknown-id-free` | Unknown id on free | `dtor`/`free`/`drain` for unknown id → `panic`. Programming error, not runtime condition. |
+| `unknown-id-free` | Unknown id on free | `dtor`/`free`/`process remaining` for unknown id → `panic`. Programming error, not runtime condition. |
 | `builder-alloc` | Builder stores allocator | Builder struct holds allocator. All ctor/dtor use the stored one. |
 | `defer-dtor` | Defer with dtor | `defer dtor(&b, &m)` — no-op if transferred (m^ == nil), cleans up if stuck. |
-| `drain-list` | Drain intrusive list | Pop all, switch on id, free each. Panic on unknown id. |
+| `process remaining-list` | Drain intrusive list | Pop all, switch on id, free each. Panic on unknown id. |
 
 ## Layer 2 — Mailbox + Master
 
@@ -37,7 +37,7 @@ Tag rule: `[itc: tag]` only if it references matryoshka API. No tag for generic 
 |---|---|---|
 | `heap-master` | Heap-allocated master | `new(Master)` — threads hold `^Master`. Stack master = dangling pointers. |
 | `thread-container` | Thread is a container | Thread proc casts `rawptr` to `^Master`, calls run. No ITC locals on stack. |
-| `mbox-close-drain` | Drain after mbox_close | `mbox_close` returns remaining list. Walk it, matryoshka_dispose each node. Never discard. |
+| `mbox-close-process remaining` | Drain after mbox_close | `mbox_close` returns remaining list. Walk it, matryoshka_dispose each node. Never discard. |
 | `defer-dispose` | Defer mbox/pool dispose | `defer matryoshka_dispose(&m_mb)` right after new. Cleanup on all paths. |
 | `send-transfer` | Send = ownership transfer | After `mbox_send` success, `m^ == nil`. Do not touch. Deferred cleanup becomes no-op. |
 
@@ -70,10 +70,10 @@ Tag rule: `[itc: tag]` only if it references matryoshka API. No tag for generic 
 | `unknown-id-free` | yes | no | yes |
 | `builder-alloc` | yes | no | yes |
 | `defer-dtor` | no | no | yes (deepdive) |
-| `drain-list` | yes | no | yes |
+| `process remaining-list` | yes | no | yes |
 | `heap-master` | no | no | no |
 | `thread-container` | no | no | no |
-| `mbox-close-drain` | no | no | no |
+| `mbox-close-process remaining` | no | no | no |
 | `defer-dispose` | no | no | no |
 | `send-transfer` | no | no | no |
 | `defer-put` | no | no | no |

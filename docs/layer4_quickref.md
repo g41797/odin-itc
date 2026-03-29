@@ -42,8 +42,8 @@ _Pool :: struct {
 Public handle hides internals:
 
 ```odin
-Mailbox :: distinct ^PolyNode
-Pool    :: distinct ^PolyNode
+Mailbox :: ^PolyNode
+Pool    :: ^PolyNode
 ```
 
 You pass them as `^PolyNode`.\

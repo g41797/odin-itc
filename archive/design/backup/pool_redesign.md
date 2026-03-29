@@ -61,7 +61,7 @@ If it is not ok — fix the root cause. Do not retry the same mistake.
 | `pool_get` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_get_wait` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_put` | nothing | `m^` is `nil` after the call — pool took it |
-| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — drain the returned list |
+| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — process remaining the returned list |
 
 For `pool_put`: if `m^` is still non-nil after the call, the pool is closed — you own the item, dispose manually.
 For `pool_get` / `pool_get_wait`: any result other than `.Ok` has a specific meaning — see the result table below.
@@ -253,7 +253,7 @@ freeMaster :: proc(master: ^Master) {
     // 1. close pool — get back stored items
     nodes, _ := pool_close(&master.pool)
 
-    // 2. drain and dispose all returned items
+    // 2. process remaining and dispose all returned items
     // NOTE: dispose nodes before freeing other Master resources — dispose code may use Master fields.
     for {
         raw := list.pop_front(&nodes)

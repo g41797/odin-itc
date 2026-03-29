@@ -9,11 +9,11 @@ _Lifecycle_Master :: struct {
 }
 
 @(private)
-_lifecycle_dispose :: proc(m: ^Maybe(^_Lifecycle_Master)) { // [itc: dispose-contract]
+_lifecycle_dispose :: proc(m: ^Maybe(^_Lifecycle_Master)) { 	// [itc: dispose-contract]
 	mp, ok := m.?
-	if !ok || mp == nil { return }
+	if !ok || mp == nil {return}
 
-	// Final drain: after close, all returned items need dispose.
+	// Final process remaining: after close, all returned items need dispose.
 	// Demonstrating Idiom 8: dispose-optional
 	remaining, _ := mbox.close(&mp.mb)
 	for node := list.pop_front(&remaining); node != nil; node = list.pop_front(&remaining) {

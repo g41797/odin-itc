@@ -87,7 +87,7 @@ test_close_returns_remaining :: proc(t: ^testing.T) {
 		free((^examples.Itm)(node))
 		count += 1
 	}
-	testing.expect(t, count == 3, "close should drain 3 remaining messages")
+	testing.expect(t, count == 3, "close should process remaining 3 remaining messages")
 }
 
 @(test)
@@ -138,8 +138,8 @@ test_waker_called_on_send :: proc(t: ^testing.T) {
 		wc.wake_count == 3,
 		"wake should be called once per send; 3 sends → count == 3",
 	)
-	drain := loop_mbox.try_receive_batch(m)
-	for node := list.pop_front(&drain); node != nil; node = list.pop_front(&drain) {
+	process remaining := loop_mbox.try_receive_batch(m)
+	for node := list.pop_front(&process remaining); node != nil; node = list.pop_front(&process remaining) {
 		free((^examples.Itm)(node))
 	}
 }

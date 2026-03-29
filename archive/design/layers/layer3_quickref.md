@@ -47,7 +47,7 @@ Pool is strong. Pool saves lives. *(We are serious about the first part.)*
 | `pool_get` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_get_wait` | `Pool_Get_Result` | `.Ok` and `m^` is non-nil |
 | `pool_put` | nothing | `m^` is `nil` after the call — pool took it |
-| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — drain the returned list |
+| `pool_close` | `(list.List, ^PoolHooks)` | always succeeds — process remaining the returned list |
 
 For `pool_put`: if `m^` is still non-nil after the call, the pool is closed.
 You own the item.

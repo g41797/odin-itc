@@ -289,7 +289,7 @@ Shutdown usually follows this order:
 
 ```
 close mailboxes
-drain remaining items
+process remaining remaining items
 return items to pools
 destroy pools
 join threads

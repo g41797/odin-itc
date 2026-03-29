@@ -1,9 +1,9 @@
 //+test
 package nbio_mbox_tests
 
-import nbio_mbox "../../nbio_mbox"
-import loop_mbox "../../loop_mbox"
 import examples "../../examples"
+import loop_mbox "../../loop_mbox"
+import nbio_mbox "../../nbio_mbox"
 import list "core:container/intrusive/list"
 import "core:nbio"
 import "core:testing"
@@ -28,7 +28,7 @@ _HF_N :: 10_000
 // nbio_mbox tests
 // ----------------------------------------------------------------------------
 
-// _test_loop_basic: send 3 messages, check length, drain in FIFO order.
+// _test_loop_basic: send 3 messages, check length, process remaining in FIFO order.
 @(private)
 _test_loop_basic :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kind) {
 	if !testing.expect(
@@ -180,7 +180,7 @@ _test_loop_wake_on_send :: proc(t: ^testing.T, kind: nbio_mbox.Nbio_Wakeuper_Kin
 		}
 	}
 
-	// Join before the final drain: on Windows .Timeout busy-polls (no keepalive),
+	// Join before the final process remaining: on Windows .Timeout busy-polls (no keepalive),
 	// so the tick loop may exhaust before the sender wakes. Joining ensures the
 	// sender has sent before we do the last try_receive_batch.
 	thread.join(th)

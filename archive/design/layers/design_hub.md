@@ -145,7 +145,7 @@ But when something breaks, you will come back here.
 - Guarantee: hooks called outside pool mutex.
 - `pool_put` — sets `m^ = nil` after return, or panics on zero id.
 - Panics on unknown id only when open.
-- `mbox_close` — returns remaining chain as `list.List`. Caller must drain.
+- `mbox_close` — returns remaining chain as `list.List`. Caller must process remaining.
 
 ### You own
 

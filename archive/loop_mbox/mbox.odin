@@ -81,7 +81,7 @@ send :: proc(m: ^Mbox($T), msg: ^Maybe(^T)) -> bool where intrinsics.type_has_fi
 // Returns an empty list if the queue is empty or in stall state.
 // On stall: some in-flight messages may not appear — caller retries on the next tick.
 //
-// Correct drain pattern:
+// Correct process remaining pattern:
 //   batch := try_receive_batch(m)
 //   for node := list.pop_front(&batch); node != nil; node = list.pop_front(&batch) {
 //       msg := (^T)(node)  // valid only when node is the first field of T (offset 0)
@@ -103,7 +103,7 @@ try_receive_batch :: proc(m: ^Mbox($T)) -> list.List where intrinsics.type_has_f
 
 // close marks the mailbox closed, calls waker.close, and drains remaining messages.
 // Returns (remaining, true) on first call; ({}, false) if already closed.
-// Caller must drain the returned list — free heap messages or return to pool.
+// Caller must process remaining the returned list — free heap messages or return to pool.
 // Must be called from the consumer thread — drains with mpsc.pop (single-consumer).
 // Precondition: all senders have stopped (threads joined). After that, no stall
 // window can be active — each sender's push (atomic exchange + next-pointer write)

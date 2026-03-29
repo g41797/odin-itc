@@ -140,7 +140,7 @@ newMaster :: proc(alloc: mem.Allocator) -> ^Master {
     }
     append(&m.hooks.ids, int(FlowId.Chunk))
     append(&m.hooks.ids, int(FlowId.Progress))
-    
+
     m.pool = pool_new(alloc)
     pool_init(m.pool, &m.hooks)
     m.inbox = mbox_new(alloc)
@@ -148,28 +148,28 @@ newMaster :: proc(alloc: mem.Allocator) -> ^Master {
 }
 
 freeMaster :: proc(master: ^Master) {
-    // Required order: close → drain → dispose → free ctx (master).
+    // Required order: close → process remaining → dispose → free ctx (master).
     // Freeing master before pool_close causes use-after-free in hooks.
 
     // 1. close pool — get back stored items
     nodes, _ := pool_close(master.pool)
 
-    // 2. drain and dispose all returned items
+    // 2. process remaining and dispose all returned items
     // NOTE: dispose nodes before freeing other Master resources.
     for {
         raw := list.pop_front(&nodes)
         if raw == nil { break }
         // dispose node — master knows how
     }
-    
+
     // 3. teardown pool
     m_pool: MayItem = (^PolyNode)(master.pool)
     matryoshka_dispose(&m_pool)
 
-    // 4. close and drain mailbox
+    // 4. close and process remaining mailbox
     remaining := mbox_close(master.inbox)
-    // drain remaining...
-    
+    // process remaining remaining...
+
     // 5. teardown mailbox
     m_mb: MayItem = (^PolyNode)(master.inbox)
     matryoshka_dispose(&m_mb)

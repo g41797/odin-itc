@@ -135,7 +135,7 @@ They follow ownership rules, but have **extra lifecycle constraints**.
 You must:
 
 1. stop producers
-2. drain or handle remaining items
+2. process remaining or handle remaining items
 3. call `mbox_close`
 4. dispose mailbox
 
@@ -143,8 +143,8 @@ You must:
 
 You must decide:
 
-* drain and destroy
-* drain and return to pool
+* process remaining and destroy
+* process remaining and return to pool
 * reject new items
 
 ---
