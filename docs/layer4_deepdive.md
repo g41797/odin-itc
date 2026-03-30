@@ -92,6 +92,12 @@ No guessing.
 
 ---
 
+## Safety: Handle Validation
+
+All Mailbox and Pool operations validate the handle's ID. If the ID is not the expected system ID (`-1` for Mailbox, `-2` for Pool), the operation will `panic` immediately. This ensures that infrastructure APIs are never called with data items or the wrong type of infrastructure handle.
+
+---
+
 ## Creation — no manager
 
 Create directly.
@@ -200,8 +206,7 @@ Master A sends it to Master B.
 ### Sender:
 
 ```odin
-m: MayItem
-m^ = (^PolyNode)(mb)
+m: MayItem = (^PolyNode)(mb)
 
 if mbox_send(out, &m) != .Ok {
     return

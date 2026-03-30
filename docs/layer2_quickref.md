@@ -53,6 +53,8 @@ Mailbox
 - blocking, with optional timeout.
 - supports interrupt and close.
 
+**Common behavior:** All mailbox operations validate the handle's ID. If the ID is not `MAILBOX_ID` (-1), the operation will `panic`.
+
 Mailbox holds ownership during transit.
 
 It releases ownership to the receiver on success.

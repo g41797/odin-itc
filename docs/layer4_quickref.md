@@ -69,6 +69,8 @@ ID_MAILBOX = -1
 ID_POOL    = -2
 ```
 
+**Common behavior:** All Mailbox/Pool operations validate the handle's ID. If the ID does not match `ID_MAILBOX` or `ID_POOL` respectively, the operation will `panic`.
+
 Do not mix ranges.
 
 User owns positive ids.\

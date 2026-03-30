@@ -164,6 +164,8 @@ Does not know your types.
 Pool is just storage.
 All lifecycle decisions live in `PoolHooks`.
 
+**Common behavior:** All pool operations validate the handle's ID. If the ID is not `POOL_ID` (-2), the operation will `panic`.
+
 ### Types
 
 ```odin

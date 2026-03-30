@@ -6,6 +6,35 @@
 
 ---
 
+## Safety: Handle Validation
+
+All mailbox operations (`mbox_send`, `mbox_wait_receive`, `mbox_interrupt`, `mbox_close`, `try_receive_batch`) validate the `Mailbox` handle. If the `PolyNode.id` is not `MAILBOX_ID` (-1), the operation will `panic` immediately. This prevents accidentally using a data item or a pool as a mailbox.
+
+---
+
+## Node reset rule
+
+Every node must have `prev == nil` and `next == nil` before it is passed to `mbox_send` or `pool_put`.
+
+- **Single-item returns** (`mbox_wait_receive`, `pool_get`, `pool_get_wait`) — the library resets the node before returning it. No action needed from the caller.
+- **Batch returns** (`mbox_close`, `try_receive_batch`, `pool_close`) — nodes remain linked to each other in the returned `list.List`. The library cannot reset them. **The caller must call `polynode_reset` after each `list.pop_front` before passing the node to `mbox_send` or `pool_put`.**
+
+In debug builds (`-debug`), `mbox_send` and `pool_put` check `polynode_is_linked` and panic if the node is still linked.
+
+```odin
+remaining := mbox_close(mb)
+for {
+    raw := list.pop_front(&remaining)
+    if raw == nil { break }
+    poly := (^PolyNode)(raw)
+    polynode_reset(poly)        // required: batch pop does not reset
+    m: MayItem = poly
+    pool_put(master.pool, &m)
+}
+```
+
+---
+
 ## Receiver loop with interrupt
 
 ```odin

@@ -6,6 +6,12 @@
 
 ---
 
+## Safety: Handle Validation
+
+All pool operations (`pool_init`, `pool_get`, `pool_get_wait`, `pool_put`, `pool_put_all`, `pool_close`) validate the `Pool` handle. If the `PolyNode.id` is not `POOL_ID` (-2), the operation will `panic` immediately. This prevents accidentally using a data item or a mailbox as a pool.
+
+---
+
 ## Recycler — from Builder to hooks
 
 You already have Builder from Layer 1.\
@@ -352,6 +358,7 @@ for {
     raw := list.pop_front(&remaining)
     if raw == nil { break }
     poly := (^PolyNode)(raw)
+    polynode_reset(poly)        // required: batch pop does not reset
     m: MayItem = poly
     pool_put(master.pool, &m)
     if m^ != nil {

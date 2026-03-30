@@ -201,7 +201,16 @@ The following are ALWAYS bugs:
 
 ---
 
-## 13. Mental Check
+## 14. Infrastructure ID Validation
+
+- `Mailbox` MUST have `id == MAILBOX_ID` (-1).
+- `Pool` MUST have `id == POOL_ID` (-2).
+- All infrastructure API calls (`mbox_*`, `pool_*`) MUST validate the handle's ID.
+- An API call with an invalid ID MUST `panic` immediately.
+
+---
+
+## 15. Mental Check
 
 At every line involving an item, you must know:
 

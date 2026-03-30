@@ -85,7 +85,7 @@ When generating or reviewing Odin code for this project, follow these rules:
 - After `pool_close`, the returned list is yours — walk it and handle each item as your shutdown strategy requires.
 
 **MayItem**
-- Always use `ptr, ok := m.?` — never the single-value form.
+- Always use `ptr, ok := m^.?` — never the single-value form.
 - After a transfer (`mbox_send`, `pool_put`), do not use `m^` — it is nil.
 - If `m^` is still non-nil after `pool_put`, the pool is closed. Dispose manually.
 

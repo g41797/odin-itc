@@ -128,6 +128,8 @@ Moves ownership between threads.
 Mailbox :: ^PolyNode
 ```
 
+**Common behavior:** All mailbox operations validate the handle's ID. If the ID is not `MAILBOX_ID` (-1), the operation will `panic`.
+
 ---
 
 ### Operations
@@ -212,6 +214,8 @@ Provides reuse and policy.
 ```odin
 Pool :: ^PolyNode
 ```
+
+**Common behavior:** All pool operations validate the handle's ID. If the ID is not `POOL_ID` (-2), the operation will `panic`.
 
 ---
 
