@@ -19,7 +19,7 @@ MayItem :: Maybe(^PolyNode)
 //       len:  int,
 //   }
 //
-// With `using`, field access is promoted: chunk.id == chunk.poly.id.
+// With `using`, field access is promoted: chunk.id == chunk^.id.
 // The cast (^Chunk)(node) is valid only when PolyNode is at offset 0.
 // matryoshka has no compile-time check for this — enforced by convention.
 //
@@ -47,7 +47,7 @@ PolyNode :: struct {
 // System IDs
 //////////////////////
 MAILBOX_ID: int : -1
-POOL_ID:    int : -2
+POOL_ID: int : -2
 
 // polynode_reset clears the intrusive link pointers of n.
 // Safe to call with n == nil (no-op).
@@ -68,4 +68,3 @@ polynode_is_linked :: proc(n: ^PolyNode) -> bool {
 	if n == nil {return false}
 	return n.prev != nil || n.next != nil
 }
-

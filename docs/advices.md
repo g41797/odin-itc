@@ -89,7 +89,7 @@ drain_list :: proc(l: ^list.List, alloc: mem.Allocator) {
         case .Sensor:
             free((^Sensor)(poly), alloc)
         case:
-            panic("process remaining: unknown id")
+            panic("unknown id")
         }
     }
 }

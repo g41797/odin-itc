@@ -2545,8 +2545,8 @@ Now:
 If user must do:
 
 ```odin
-ptr.node.prev = nil
-ptr.node.next = nil
+ptr^.prev = nil
+ptr^.next = nil
 ```
 
 👉 your API is broken

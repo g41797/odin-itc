@@ -23,14 +23,14 @@ ctor :: proc(b: ^Builder, id: int) -> MayItem {
 		if ev == nil {
 			return nil
 		}
-		ev.poly.id = id
+		ev^.id = id
 		return MayItem(&ev.poly)
 	case .Sensor:
 		s := new(Sensor, b.alloc)
 		if s == nil {
 			return nil
 		}
-		s.poly.id = id
+		s^.id = id
 		return MayItem(&s.poly)
 	case:
 		return nil
@@ -43,17 +43,22 @@ dtor :: proc(b: ^Builder, m: ^MayItem) {
 	if m == nil {
 		return
 	}
-	ptr, ok := m.?
+	ptr, ok := m^.?
 	if !ok {
 		return
 	}
+	// fmt.printfln("dtor: freeing item with id %d at %p", ptr.id, ptr)
 	switch ItemId(ptr.id) {
 	case .Event:
 		free((^Event)(ptr), b.alloc)
 	case .Sensor:
 		free((^Sensor)(ptr), b.alloc)
 	case:
-		panic("unknown id")
+		if ptr.id == 999 { 	// EXIT_ID
+			free(ptr, b.alloc)
+		} else {
+			panic("unknown id")
+		}
 	}
 	m^ = nil
 }

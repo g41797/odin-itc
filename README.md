@@ -291,16 +291,6 @@ Same rules.
 
 ---
 
-## Practical notes
-
-* Use positive ids for your data
-* System uses negative ids
-* Close Mailbox before dispose
-* Close Pool before dispose
-* Do not pool Mailbox or Pool
-
----
-
 ## Takeaway
 
 Threads are hard. Matryoshka does not change that. It tries to make the bumping less blind.

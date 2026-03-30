@@ -13,12 +13,14 @@ BUILDS=(
     examples/layer1
     examples/layer2
     examples/layer3
+    examples/layer4
 )
 
 TESTS=(
     tests/layer1
     tests/layer2
     tests/layer3
+    tests/layer4
 )
 
 DOCS=(
@@ -26,6 +28,7 @@ DOCS=(
     examples/layer1
     examples/layer2
     examples/layer3
+    examples/layer4
 )
 
 echo "${BLUE}Starting flat local CI...${NC}"

@@ -39,7 +39,7 @@ example_produce_consume :: proc(alloc: mem.Allocator) -> bool {
 		if ev == nil {
 			return false
 		}
-		ev.poly.id = int(ItemId.Event)
+		ev^.id = int(ItemId.Event)
 		ev.code = i
 		ev.message = "event"
 		list.push_back(&l, &ev.poly.node)
@@ -48,7 +48,7 @@ example_produce_consume :: proc(alloc: mem.Allocator) -> bool {
 		if s == nil {
 			return false
 		}
-		s.poly.id = int(ItemId.Sensor)
+		s^.id = int(ItemId.Sensor)
 		s.name = "sensor"
 		s.value = f64(i) * 1.5
 		list.push_back(&l, &s.poly.node)

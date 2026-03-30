@@ -23,15 +23,7 @@ TESTS=(
     tests/layer4
 )
 
-DOCS=(
-    .
-    examples/layer1
-    examples/layer2
-    examples/layer3
-    examples/layer4
-)
-
-echo "${BLUE}Starting flat local CI (debug)...${NC}"
+echo "${BLUE}Starting flat local CI (quick)...${NC}"
 
 if ! command -v odin >/dev/null 2>&1; then
     echo "Error: odin compiler not found in PATH"
@@ -66,15 +58,6 @@ for opt in "${OPTS[@]}"; do
 
     echo "${GREEN}  pass: ${opt}${NC}"
 done
-
-echo
-echo "${BLUE}--- doc smoke test ---${NC}"
-for path in "${DOCS[@]}"; do
-    if [ -d "./${path}" ] && [ -n "$(find ./${path} -maxdepth 1 -name '*.odin' -size +0c 2>/dev/null | head -1)" ]; then
-        odin doc ./${path}/
-    fi
-done
-echo "${GREEN}  docs OK${NC}"
 
 echo
 echo "${GREEN}ALL CHECKS PASSED${NC}"

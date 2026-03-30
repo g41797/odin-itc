@@ -18,7 +18,7 @@ An **intrusive** queue puts the link inside your struct:
 
 ```
 [ your struct                 ]   ← one allocation
-    PolyNode.node.next ──────────► next item in queue
+    PolyNode.next ──────────────► next item in queue
     PolyNode.id
     your fields...
 ```
@@ -137,14 +137,14 @@ ctor :: proc(b: ^Builder, id: int) -> MayItem {
         if ev == nil {
             return nil
         }
-        ev.poly.id = id
+        ev^.id = id
         return MayItem(&ev.poly)
     case .Sensor:
         s := new(Sensor, b.alloc)
         if s == nil {
             return nil
         }
-        s.poly.id = id
+        s^.id = id
         return MayItem(&s.poly)
     case:
         return nil
@@ -165,7 +165,11 @@ dtor :: proc(b: ^Builder, m: ^MayItem) {
     case .Sensor:
         free((^Sensor)(ptr), b.alloc)
     case:
-        panic("dtor: unknown id")
+        if ptr.id == 999 { // EXIT_ID
+            free(ptr, b.alloc)
+        } else {
+            panic("unknown id")
+        }
     }
     m^ = nil
 }
@@ -179,7 +183,7 @@ This is the manual way — without Builder:
 ```odin
 ev := new(Event, alloc)
 // ...
-ev.poly.id = int(ItemId.Event)
+ev^.id = int(ItemId.Event)
 ev.code = 99
 ev.message = "owned"
 // ...
@@ -234,7 +238,7 @@ for i in 0 ..< N {
     if ev == nil {
         return false
     }
-    ev.poly.id = int(ItemId.Event)
+    ev^.id = int(ItemId.Event)
     ev.code = i
     ev.message = "event"
     list.push_back(&l, &ev.poly.node)
@@ -243,7 +247,7 @@ for i in 0 ..< N {
     if s == nil {
         return false
     }
-    s.poly.id = int(ItemId.Sensor)
+    s^.id = int(ItemId.Sensor)
     s.name = "sensor"
     s.value = f64(i) * 1.5
     list.push_back(&l, &s.poly.node)
@@ -276,7 +280,8 @@ for {
         fmt.printfln("Sensor: name=%s  value=%f", s.name, s.value)
         free(s, alloc)
     case:
-        panic("consume: unknown id")
+        fmt.printfln("unknown id: %d", poly.id)
+        panic("unknown id")
     }
     processed += 1
 }
