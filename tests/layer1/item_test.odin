@@ -26,12 +26,12 @@ test_list_order :: proc(t: ^testing.T) {
 	l: list.List
 
 	e1 := new(ex.Event)
-	e1.poly.id = int(ex.ItemId.Event)
+	e1^.id = int(ex.ItemId.Event)
 	e1.code = 1
 	list.push_back(&l, &e1.poly.node)
 
 	s1 := new(ex.Sensor)
-	s1.poly.id = int(ex.ItemId.Sensor)
+	s1^.id = int(ex.ItemId.Sensor)
 	s1.value = 2.0
 	list.push_back(&l, &s1.poly.node)
 

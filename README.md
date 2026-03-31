@@ -66,13 +66,13 @@ I never read the Winnie-the-Pooh book. I found this at the very opening of Steve
 
 `^MayItem` — a pointer to an optional pointer — is not normal-looking code.
 
-The alternatives are not normal-looking either:
+The key property is **visibility** — ownership state is explicit at every call site.
+The alternatives lose that:
 
 | Approach | What you lose |
 |---|---|
-| `^^PolyNode` | Two pointers, no convention. `*m == nil` could mean anything. |
-| `rawptr + bool` | You manage the flag. Forget it once and you have a bug. |
-| callback | Item disappears on return. No explicit handoff. |
+| `^^PolyNode` | No convention. `m^ == nil` could mean anything. Ownership invisible. |
+| `rawptr + bool` | You manage the flag. Forget it once and you have a bug. Ownership invisible. |
 
 `^MayItem` makes one rule visible at every call site:
 

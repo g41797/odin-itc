@@ -8,8 +8,8 @@ import "core:testing"
 test_poly_node_zero_value :: proc(t: ^testing.T) {
 	n: matryoshka.PolyNode
 	testing.expect(t, n.id == 0, "zero-value PolyNode must have id == 0")
-	testing.expect(t, n.node.prev == nil, "zero-value node.prev must be nil")
-	testing.expect(t, n.node.next == nil, "zero-value node.next must be nil")
+	testing.expect(t, n.prev == nil, "zero-value node.prev must be nil")
+	testing.expect(t, n.next == nil, "zero-value node.next must be nil")
 }
 
 @(test)
