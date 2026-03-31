@@ -1,0 +1,73 @@
+site_name: matryoshka
+docs_dir: docs
+site_dir: output
+site_description: Layered inter-thread communication for Odin
+repo_url: https://github.com/g41797/matryoshka/
+repo_name: matryoshka on GitHub
+
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: lime
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - toc.follow
+    - content.code.copy
+
+nav:
+  - Home: addendums/readme.md
+  - Layer 1 — PolyNode + MayItem:
+      - Quick Reference: layer1_quickref.md
+      - Deep Dive: layer1_deepdive.md
+  - Layer 2 — Mailbox:
+      - Quick Reference: layer2_quickref.md
+      - Deep Dive: layer2_deepdive.md
+  - Layer 3 — Pool:
+      - Quick Reference: layer3_quickref.md
+      - Deep Dive: layer3_deepdive.md
+  - Layer 4 — Infrastructure as Items:
+      - Quick Reference: layer4_quickref.md
+      - Deep Dive: layer4_deepdive.md
+  - Addendums:
+      - Advices: advices.md
+      - Advice Catalog: advice_catalog.md
+      - Hard Rules: addendums/hard-rules.md
+      - Critical Issues: addendums/critical-issues.md
+      - C++ Decision: addendums/cpp-decision.md
+      - Doctor Ordered: addendums/doctor-ordered.md
+  - API Reference: api_reference.md
+
+plugins:
+  - search
+
+extra:
+  generator: false
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+copyright: >
+  Copyright &copy; 2026 g41797

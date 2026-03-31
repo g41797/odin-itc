@@ -1,0 +1,20 @@
+{
+    "hide_core": true,
+    "hide_base": true,
+    "collections": {
+        "matryoshka": {
+            "name": "matryoshka",
+            "source_url": "https://github.com/g41797/matryoshka/blob/main",
+            "base_url": "/matryoshka",
+            "root_path": "PROJECT_ROOT",
+            "license": {
+                "text": "MIT",
+                "url": "https://github.com/g41797/matryoshka/tree/main/LICENSE"
+            },
+            "home": {
+                "title": "matryoshka",
+                "embed_readme": "PROJECT_ROOT/kitchen/docs/addendums/readme.md"
+            }
+        }
+    }
+}

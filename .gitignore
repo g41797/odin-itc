@@ -49,6 +49,15 @@ welcomed_tests.md
 /docs_site/site/
 tools/doc_config.json
 tools/odin_doc_to_html.py
+
+# kitchen/ generated artifacts
+kitchen/docs/apidocs/
+kitchen/output/
+kitchen/tools/tmp_pkg_repo
+
+# kitchen/ tools — binaries are tracked (same as archive/tools)
+!kitchen/tools/libcmark.so
+!kitchen/tools/odin-doc
 /design/nbui-command-initial.md
 How to avoid the callback hell when using the new core_nio_ - Help - Odin - Forum.pdf
 
