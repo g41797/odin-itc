@@ -201,27 +201,3 @@ You cannot do this.\
 Do not try to get/put Mailboxes or Pools into a Pool.\
 If the pool is open, it will treat them as a "foreign" id and panic.
 
----
-
-## What changed from Doll 3
-
-* Before: only data is item
-* Now: infrastructure is also item
-
-What did not change:
-
-* Ownership rules
-* Mailbox behavior
-* Pool behavior
-
----
-
-## What you learned (Doll 4)
-
-* One model is enough
-* Everything can move
-* Ownership stays simple
-* Infrastructure is not special
-* But infrastructure is not data
-
-Keep that last line in mind.

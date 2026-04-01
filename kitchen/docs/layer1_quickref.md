@@ -147,14 +147,3 @@ make_builder :: proc(alloc: mem.Allocator) -> Builder {
 - Safe to call with `m == nil` or `m^ == nil` — no-op.
 - Panics on unknown id — a programming error.
 
----
-
-## What you learned (Doll 1)
-
-- Item has one owner.
-- Transfer is explicit.
-- Every path must end.
-- Builder handles creation and destruction.
-- You write the policy.
-- Builder is yours. Your code, your rules.
-- Matryoshka does not need Builder - You do.

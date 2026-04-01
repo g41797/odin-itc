@@ -13,7 +13,7 @@
             },
             "home": {
                 "title": "matryoshka",
-                "embed_readme": "PROJECT_ROOT/kitchen/docs/addendums/readme.md"
+                "embed_readme": "PROJECT_ROOT/kitchen/docs/addendums/api_readme.md"
             }
         }
     }

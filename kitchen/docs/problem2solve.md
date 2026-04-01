@@ -1,79 +1,48 @@
-## The problem
+# The problem this solves
 
-Multiple threads touching the same data at the same time — dangerous.
-Not because threads are evil.
-Because **two hands on the same thing** at the same time: who frees it? who modifies it?
+## Problem 1 — is it gone or still mine?
 
-The answer isn't locks.
-Locks are "two hands, careful coordination."
-**The answer is: one hand at a time. Always.**
+You have a thing. You call an exchange function — a point where ownership may transfer to another thread.
+May. Not always. The other side might be closed. Full. Not ready.
 
-Move. Don't share.
+After the call: is your thing gone? Or is it still yours?
 
----
+In single-threaded code this question doesn't exist — functions are deterministic.
+At thread boundaries, it does.
 
-## The new question
+You need one check at the call site. No flags. No separate state.
 
-When you move something — send it, put it, throw it through —
-**did it go? or is it still here?**
+`^Maybe(^T)` fits:
 
-You need to know. Right now. Without asking anyone.
+- `m^ != nil` → still yours
+- `m^ == nil` → went through
 
----
+One rule. Visible at every call site.
 
-## The portal
+This idea was written up on the Odin forum first:
+[`^Maybe(^T)` — visible pointer transfer in Odin](https://forum.odin-lang.org/t/maybe-t-visible-pointer-transfer-in-odin/1679/1)
 
-An exchange point. A portal.
-You put the item in.
-
-Two outcomes:
-
-- **Went through.** The other side has it. **Your hand: empty.**
-- **Portal closed.** It never went through. **Your hand: still full.**
-
-You don't ask. You look at your hand.
-**You need one check. Empty or gone. That is all.**
+The first version of this project was built on `^Maybe($T)`.
 
 ---
 
-## The illusionist difference
+## Problem 2 — real applications exchange many types
 
-Normal magic: item disappears. You don't know where. You can't check.
+`^Maybe($T)` is generic and type-safe. One type per exchange point.
 
-This magic: item disappears **and your hand visibly empties.**
-The mechanics betray the trick.
-You always know.
+Then came a real application: events, commands, responses — all through the same exchange point.
+`^Maybe($T)` locks you to one type. You need a second exchange point for the next type, a third for the next.
+Infrastructure multiplies. Code duplicates.
 
-**`^Maybe(^T)` gives you that check.** That is what a plain pointer cannot.
-The portal reaches into your hand and empties it. You see it happen.
-
----
-
-## Two portals. One hand. One rule.
-
-**Mailbox — portal to another thread:**
-
-- Send success → hand empties. Item is on the other side.
-- Send fail (closed) → hand stays full. Still yours.
-- Receive → hand fills. Item arrived.
-
-**Pool — portal to a depot:**
-
-- Put success → hand empties. Item is stored.
-- Put fail (closed) → hand stays full. Still yours.
-- Get success → hand fills. Item came from the depot.
-- Get fail → hand stays empty. Nothing arrived.
+`PolyNode` — one base, one exchange point. Works for everything. Suitable not for everyone — see [Doll 1](layer1_quickref.md).
 
 ---
 
-## Same hand. Two portals. One rule:
+## Together: `^Maybe(^PolyNode)`
 
-> Full = yours. Empty = went through, or nothing came.
+`^Maybe(^PolyNode)` combines both solutions:
 
-No exceptions.
+- `^Maybe(^...)` — `m^ != nil` means yours, `m^ == nil` means gone
+- `^PolyNode` — one infrastructure for every type that embeds `PolyNode`
 
----
-
-*`^Maybe(^T)` — Maybe finally has a job only it can do.*
-
----
+One ownership rule. One infrastructure. All your types.

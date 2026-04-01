@@ -2,8 +2,10 @@
 
 Someone found it in the back of a drawer.
 
-It was clean. It worked. Someone had played with it — carefully, with thought.
-Then it was set aside. Replaced by something simpler.
+It was clean. It worked.<br>
+Someone had played with it — carefully, with thought.<br>
+Then it was set aside. <br>
+Replaced by something simpler.<br>
 Not broken. Just not needed anymore.
 
 This is that doll.
@@ -14,12 +16,16 @@ This is that doll.
 
 Picture in README shows 5 dolls, but you did not ask — why are you talking about 4?
 
-Doll 5 was implemented as part of an older version of this project.
+Doll 5 was implemented as part of an older version of this project.<br>
 Based on `^Maybe(^T)`, still not "famous" `^Maybe(^PolyNode)`.
 
-During moving to `^Maybe(^PolyNode)` I added to Mailbox new API `try_receive_batch` and it solved the problem that mpsc should solve. Almost.
-Also I don't like atomics. During stages of troubleshooting I'd like to immediately understand code, I cannot say that I fully understand atomics, so mpsc was thrown away...
-but picture remains 😢
+During moving to `^Maybe(^PolyNode)` I added to Mailbox new API `try_receive_batch`.<br>
+It solved the problem that mpsc should solve.<br>
+Almost.<br>
+Also I don't like atomics.<br>
+During stages of troubleshooting I'd like to immediately understand code.<br>
+I cannot say that I fully understand atomics, so mpsc was thrown away...<br>
+But picture remains 😢
 
 ---
 

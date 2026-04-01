@@ -34,8 +34,8 @@ theme:
     - content.code.copy
 
 nav:
-  - Home: addendums/readme.md
-  - The Problem: problem2solve.md
+  - Home: problem2solve.md
+# - Home: addendums/readme.md
   - Doll 1 — PolyNode + MayItem:
       - Quick Reference: layer1_quickref.md
       - Deep Dive: layer1_deepdive.md
@@ -50,7 +50,7 @@ nav:
       - Deep Dive: layer4_deepdive.md
   - Addendums:
       - Forgotten Doll: addendums/forgotten_doll.md
-      - Dialogs: addendums/dialogs.md
+  #     - Dialogs: addendums/dialogs.md
   #     - Advices: advices.md
   #     - Advice Catalog: advice_catalog.md
   #     - Hard Rules: addendums/hard-rules.md

@@ -378,37 +378,3 @@ Each infrastructure item:
 
 No hidden dependency.
 
----
-
-## What changed from Doll 3
-
-Before:
-
-* infrastructure managed separately
-* custom teardown paths
-
-Now:
-
-* infrastructure is item
-* same ownership model
-* same disposal entry
-
----
-
-## What did not change
-
-* Mailbox API
-* Pool API
-* Ownership rules
-* Error handling
-
----
-
-## What you learned (Doll 4)
-
-* One model scales
-* Infrastructure can move
-* Lifecycle is unified
-* Simplicity must be protected
-* Infrastructure is not data
-* Treat it with more care

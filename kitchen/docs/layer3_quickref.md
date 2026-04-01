@@ -345,15 +345,3 @@ If the panic occurs on node N in a chain of M nodes, nodes N+1 through M are nev
 - `on_get` sets `node.id` at allocation time.
 - Id values are user-defined integer constants — typically from an enum.
 
----
-
-## What you learned (Doll 3)
-
-- Reuse is not free — it needs policy.
-- Pool is strong. Check every result.
-- Your hooks grow when you need control.
-- Pool code never changes. Only your hooks become smarter.
-- You look back at your first code. You don't like it.
-- You rewrite it. Nothing forces you to keep it.
-- You keep only what you learned.
-- Recycler is yours. Your hooks, your policy. Pool never changes. Your hooks grow.

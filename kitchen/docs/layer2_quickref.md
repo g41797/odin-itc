@@ -270,17 +270,3 @@ That is how other Masters talk to it.
 └─────────────┘
 ```
 
----
-
-## What you learned (Doll 2)
-
-- Absence is also a state — timeout, interrupt.
-- Not every signal carries data.
-- Shutdown is part of normal flow.
-- Builder handles the lifecycle — no pool needed yet.
-- Builder is yours.
-- Think in Masters, not threads.
-- Master is yours.
-- Your code, your logic.
-- Matryoshka gives you Mailbox.
-- Master is what you build on top.
