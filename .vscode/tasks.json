@@ -36,6 +36,7 @@
     ],
     "inputs": [
         {
+
             "id": "testPackage",
             "type": "pickString",
             "description": "Select test package",

@@ -9,7 +9,7 @@
 
 ## Document Writing Rules
 
-When editing this document, follow these rules:
+When editing documents, follow these rules:
 
 **Sentences**
 - One idea per line.
@@ -72,8 +72,8 @@ When editing this document, follow these rules:
 When generating or reviewing Odin code for this project, follow these rules:
 
 **Status checks**
-- Check the return value of every matryoshka API call (`mbox_send`, `mbox_wait_receive`, `pool_get`, `pool_get_wait`).
-- Check the return value of every memory allocation (`new`, `make`).
+- Check the return value of every matryoshka API call (`mbox_send`, `mbox_wait_receive`, `pool_get`, `pool_get_wait`, and so on...).
+- Check the return value of every memory allocation (`new`, `make`, ...).
 - If the correct handling of a status is not obvious, add a comment: `// TODO(developer): handle <status> — <what could go wrong>`.
 - Do not silently ignore a non-Ok status.
 
@@ -107,14 +107,6 @@ This section is the resume point after `/clear` or a new session.
 
 ### Active tasks
 
-**Advice catalog** — [advice_catalog.md](advice_catalog.md)
-- Status: catalog created with all L1/L2/L3/generic advices and status table.
-- Done: L1 advices partly in advices.md (explicit-alloc, defer-cleanup, unknown-id, builder-alloc, process remaining-list).
-- Next: add remaining L1 advices to advices.md, create `flat/tests/advices/` with L1 tests.
-- L2/L3 advices deferred until that code exists.
-
----
-emaining L1 advices to advices.md, create `flat/tests/advices/` with L1 tests.
-- L2/L3 advices deferred until that code exists.
+NOP
 
 ---
