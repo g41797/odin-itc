@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 /*
-Package matryoshka is an inter-thread communication library for Odin.
+Building blocks for boring systems in Odin.
 
-Foundation:
+Block 1 — PolyNode + MayItem: item and ownership.
 
-- PolyNode: intrusive node embedded at offset 0 in every item.
-- MayItem (alias for Maybe(^PolyNode)): ownership handle used at every API boundary.
+Block 2 — Mailbox: move items between threads.
 
-Services:
+Block 3 — Pool: reuse items.
 
-- Mailbox: moves items between threads with blocking receive.
-- Pool: reusable item storage with pluggable lifecycle hooks.
+Block 4 — Infrastructure as items: mailboxes and pools are items too.
+
+Open the next block only when you need it.
+
+[[Documentation;https://g41797.github.io/matryoshka/]]
 */
 package matryoshka

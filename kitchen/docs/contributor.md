@@ -73,6 +73,12 @@ When editing documents, follow these rules:
 - A snippet may be shortened with `// ...` to skip irrelevant lines.
   The tag still points to the full range.
 
+**Odin doc comments (doc.odin)**
+
+- Use `[[Text;URL]]` for clickable hyperlinks in odin-doc output.
+- Example: `[[Documentation;https://g41797.github.io/matryoshka/]]`
+- Plain URLs are not guaranteed to render as links — always use `[[ ]]`.
+
 **Cross-block references**
 
 - A block may reference earlier blocks.
