@@ -8,7 +8,7 @@ example_builder :: proc(alloc: mem.Allocator) -> bool {
 	b := make_builder(alloc)
 
 	// Create an Event via ctor.
-	m := ctor(&b, int(ItemId.Event))
+	m := ctor(&b, EVENT_TAG)
 	ptr, ok := m.?
 	if !ok {
 		return false

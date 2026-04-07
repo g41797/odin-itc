@@ -28,7 +28,7 @@ newMaster3 :: proc(alloc: mem.Allocator) -> ^Master3 {
 		on_get = master_on_get,
 		on_put = master_on_put,
 	}
-	append(&m.hooks.ids, int(ItemId.Event))
+	append(&m.hooks.tags, EVENT_TAG)
 
 	matryoshka.pool_init(m.pool, &m.hooks)
 
@@ -61,7 +61,7 @@ freeMaster3 :: proc(m: ^Master3) {
 	mi_mb: MayItem = (^PolyNode)(m.inbox)
 	matryoshka.matryoshka_dispose(&mi_mb)
 
-	delete(m.hooks.ids)
+	delete(m.hooks.tags)
 	alloc := m.alloc
 	free(m, alloc)
 }
@@ -94,7 +94,7 @@ example_master_with_pool :: proc() -> bool {
 	// Send 5 items from pool.
 	for i in 0 ..< 5 {
 		mi: MayItem
-		if matryoshka.pool_get(m.pool, int(ItemId.Event), .Available_Or_New, &mi) == .Ok {
+		if matryoshka.pool_get(m.pool, EVENT_TAG, .Available_Or_New, &mi) == .Ok {
 			ptr, _ := mi.?
 			(^Event)(ptr).code = i
 			matryoshka.mbox_send(m.inbox, &mi)

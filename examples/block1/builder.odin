@@ -14,27 +14,25 @@ make_builder :: proc(alloc: mem.Allocator) -> Builder {
 	return Builder{alloc = alloc}
 }
 
-// ctor allocates the correct type for id and sets id.
-// Returns nil for unknown ids.
-ctor :: proc(b: ^Builder, id: int) -> MayItem {
-	switch ItemId(id) {
-	case .Event:
+// ctor allocates the correct type for tag and sets tag.
+// Returns nil for unknown tags.
+ctor :: proc(b: ^Builder, tag: rawptr) -> MayItem {
+	if event_is_it_you(tag) {
 		ev := new(Event, b.alloc)
 		if ev == nil {
 			return nil
 		}
-		ev^.id = id
+		ev^.tag = EVENT_TAG
 		return MayItem(&ev.poly)
-	case .Sensor:
+	} else if sensor_is_it_you(tag) {
 		s := new(Sensor, b.alloc)
 		if s == nil {
 			return nil
 		}
-		s^.id = id
+		s^.tag = SENSOR_TAG
 		return MayItem(&s.poly)
-	case:
-		return nil
 	}
+	return nil
 }
 
 // dtor frees internal resources and the node, then sets m^ = nil.
@@ -47,18 +45,12 @@ dtor :: proc(b: ^Builder, m: ^MayItem) {
 	if !ok {
 		return
 	}
-	// fmt.printfln("dtor: freeing item with id %d at %p", ptr.id, ptr)
-	switch ItemId(ptr.id) {
-	case .Event:
+	if event_is_it_you(ptr.tag) {
 		free((^Event)(ptr), b.alloc)
-	case .Sensor:
+	} else if sensor_is_it_you(ptr.tag) {
 		free((^Sensor)(ptr), b.alloc)
-	case:
-		if ptr.id == 999 { 	// EXIT_ID
-			free(ptr, b.alloc)
-		} else {
-			panic("unknown id")
-		}
+	} else {
+		panic("unknown tag")
 	}
 	m^ = nil
 }

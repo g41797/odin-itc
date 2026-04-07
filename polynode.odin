@@ -9,6 +9,14 @@ import list "core:container/intrusive/list"
 MayItem :: Maybe(^PolyNode)
 //////////////////////////////
 
+// PolyTag is the tag type for PolyNode.
+// Each item type defines one private static instance at file scope.
+// The address of that instance is the unique tag for that type.
+// The padding byte ensures each instance has a distinct address.
+PolyTag :: struct {
+	_: u8,
+}
+
 // PolyNode is the intrusive node embedded at offset 0 in every matryoshka item.
 //
 // Embed via `using` at the first field:
@@ -19,14 +27,14 @@ MayItem :: Maybe(^PolyNode)
 //       len:  int,
 //   }
 //
-// With `using`, field access is promoted: chunk.id == chunk^.id.
+// With `using`, field access is promoted: chunk.tag == chunk^.tag.
 // The cast (^Chunk)(node) is valid only when PolyNode is at offset 0.
 // matryoshka has no compile-time check for this — enforced by convention.
 //
-// id rules:
-//   - Must be != 0 after creation.
-//   - Zero is always invalid (zero value of int — catches uninitialized nodes).
-//   - Ids are user-defined, typically from an enum.
+// tag rules:
+//   - Must be != nil after creation.
+//   - nil is always invalid — catches uninitialized nodes.
+//   - Tags are static addresses defined by the user per item type.
 //
 // Ownership is tracked via MayItem (alias for Maybe(^PolyNode)) at every API boundary:
 //
@@ -40,14 +48,8 @@ MayItem :: Maybe(^PolyNode)
 //   MayItem    — nil/non-nil tells every API who holds the item.
 PolyNode :: struct {
 	using node: list.Node, // intrusive link — .prev, .next
-	id:         int, // type discriminator, must be != 0
+	tag:        rawptr,    // type discriminator, must be != nil
 }
-
-//////////////////////
-// System IDs
-//////////////////////
-MAILBOX_ID: int : -1
-POOL_ID: int : -2
 
 // polynode_reset clears the intrusive link pointers of n.
 // Safe to call with n == nil (no-op).

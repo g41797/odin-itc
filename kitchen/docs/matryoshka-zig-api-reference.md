@@ -7,6 +7,19 @@
 
 ## Core Types
 
+### PolyTag
+
+The type for unique type identifiers.
+
+```zig
+pub const PolyTag = struct {
+    _: u8 = 0,
+};
+```
+
+Each item type defines one private static instance at file scope.
+The address of that instance is the unique tag for that type.
+
 ### PolyNode
 
 The header at **offset 0** in every item.
@@ -14,7 +27,7 @@ The header at **offset 0** in every item.
 ```zig
 pub const PolyNode = struct {
     node: list.Node,
-    id: i32, // must be != 0
+    tag: ?*const anyopaque, // must be != null
 };
 ```
 
@@ -40,29 +53,31 @@ You must:
 
 ---
 
-## ID Rules
+## Tag Rules
 
 One field.
-Two ranges.
+One rule: null is always invalid.
 
 ```zig
-// Convention
-id == 0   → invalid
-id > 0    → user data
-id < 0    → infrastructure
+// Define one tag per type:
+const my_tag = PolyTag{};
+
+pub const MY_TAG: *const PolyTag = &my_tag;
+
+pub fn myIsItYou(tag: ?*const anyopaque) bool {
+    return tag == MY_TAG;
+}
 ```
 
-Example:
+Infrastructure tags:
 
 ```zig
-const SystemId = enum(i32) {
-    Invalid = 0,
-    Mailbox = -1,
-    Pool    = -2,
-};
+pub const MAILBOX_TAG: *const anyopaque  // address of internal mailbox_tag
+pub const POOL_TAG:    *const anyopaque  // address of internal pool_tag
 ```
 
-User must not use negative ids.
+User tags and infrastructure tags never collide.
+Each is a unique file-scope address.
 
 ---
 
@@ -101,7 +116,7 @@ Entry:
 
 Algorithm:
 
-* read `m.*.?.id` (if present)
+* read `m.*.?.tag`
 * cast to internal type
 * check state
 
@@ -128,6 +143,8 @@ Moves ownership between threads.
 pub const Mailbox = *PolyNode;
 ```
 
+**Common behavior:** All mailbox operations validate the handle's tag. If the tag is not `MAILBOX_TAG`, the operation will `panic`.
+
 ---
 
 ### Operations
@@ -153,7 +170,7 @@ pub const RecvResult = enum {
 pub fn mbox_wait_receive(
     mb: Mailbox,
     out: *Maybe,
-    timeout: time.Duration = -1,
+    timeout: time.Duration,
 ) RecvResult
 
 pub const IntrResult = enum {
@@ -213,6 +230,8 @@ Provides reuse and policy.
 pub const Pool = *PolyNode;
 ```
 
+**Common behavior:** All pool operations validate the handle's tag. If the tag is not `POOL_TAG`, the operation will `panic`.
+
 ---
 
 ### Initialization
@@ -246,7 +265,7 @@ pub const Pool_Get_Result = enum {
 
 pub fn pool_get(
     p: Pool,
-    id: i32,
+    tag: *const anyopaque,
     mode: Pool_Get_Mode,
     m: *Maybe,
 ) Pool_Get_Result
@@ -255,7 +274,7 @@ pub fn pool_get(
 // Does not call on_get.
 pub fn pool_get_wait(
     p: Pool,
-    id: i32,
+    tag: *const anyopaque,
     m: *Maybe,
     timeout: time.Duration,
 ) Pool_Get_Result
@@ -293,8 +312,8 @@ Put:
 ```zig
 pub const PoolHooks = struct {
     ctx: ?*anyopaque,
-    ids: std.ArrayList(i32),   // all > 0
-    on_get: *const fn(ctx: ?*anyopaque, id: i32, in_pool_count: usize, m: *Maybe) void,
+    tags: std.ArrayList(*const anyopaque),   // all != null
+    on_get: *const fn(ctx: ?*anyopaque, tag: *const anyopaque, in_pool_count: usize, m: *Maybe) void,
     on_put: *const fn(ctx: ?*anyopaque, in_pool_count: usize, m: *Maybe) void,
 };
 ```
@@ -305,7 +324,7 @@ pub const PoolHooks = struct {
 
 on_get:
 
-* `m.* == null` → create new item
+* `m.* == null` → create new item, set `node.tag = tag`
 * `m.* != null` → reinitialize
 
 on_put:
@@ -320,8 +339,8 @@ on_put:
 
 ## Infrastructure rules
 
-* Infrastructure uses negative ids
-* Infrastructure is not pooled by default
+* Infrastructure uses reserved tags (`MAILBOX_TAG`, `POOL_TAG`)
+* Infrastructure is not pooled
 * Infrastructure must be closed before dispose
 
 ---

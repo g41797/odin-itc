@@ -4,26 +4,23 @@ import matryoshka "../.."
 import list "core:container/intrusive/list"
 
 // master_on_get provides creation and reinitialization logic for the pool.
-master_on_get :: proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+master_on_get :: proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 	b := (^Builder)(ctx)
 	if m^ == nil {
 		// Create new item.
-		m^ = ctor(b, id)
-		// fmt.printfln("Recycler: created new item id=%d", id)
+		m^ = ctor(b, tag)
 	} else {
 		// Reinitialize recycled item.
 		ptr, _ := m^.?
-		#partial switch ItemId(ptr.id) {
-		case .Event:
+		if event_is_it_you(ptr.tag) {
 			ev := (^Event)(ptr)
 			ev.code = 0
 			ev.message = ""
-		case .Sensor:
+		} else if sensor_is_it_you(ptr.tag) {
 			s := (^Sensor)(ptr)
 			s.name = ""
 			s.value = 0.0
 		}
-		// fmt.printfln("Recycler: reinitialized item id=%d", id)
 	}
 }
 
@@ -43,15 +40,15 @@ example_recycler :: proc() -> bool {
 		on_get = master_on_get,
 		on_put = master_on_put,
 	}
-	append(&hooks.ids, int(ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, EVENT_TAG)
+	defer delete(hooks.tags)
 
 	p := matryoshka.pool_new(alloc)
 	matryoshka.pool_init(p, &hooks)
 
 	// Round-trip 1: Create.
 	mi: MayItem
-	if matryoshka.pool_get(p, int(ItemId.Event), .Available_Or_New, &mi) != .Ok {
+	if matryoshka.pool_get(p, EVENT_TAG, .Available_Or_New, &mi) != .Ok {
 		return false
 	}
 
@@ -59,7 +56,7 @@ example_recycler :: proc() -> bool {
 	matryoshka.pool_put(p, &mi)
 
 	// Round-trip 2: Reuse.
-	if matryoshka.pool_get(p, int(ItemId.Event), .Available_Or_New, &mi) != .Ok {
+	if matryoshka.pool_get(p, EVENT_TAG, .Available_Or_New, &mi) != .Ok {
 		return false
 	}
 

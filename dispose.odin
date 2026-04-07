@@ -10,7 +10,7 @@ package matryoshka
 //   - m^ == nil → no-op
 //
 // The item must be closed before disposal (mbox_close / pool_close).
-// Panics if the item is still open, or if the id is not a known system id.
+// Panics if the item is still open, or if the tag is not a known system tag.
 //
 // Exit:
 //   - m^ = nil on success
@@ -19,12 +19,11 @@ matryoshka_dispose :: proc(m: ^MayItem) {
 		return
 	}
 	ptr, _ := m^.?
-	switch ptr.id {
-	case MAILBOX_ID:
+	if mailbox_is_it_you(ptr.tag) {
 		_mbox_dispose(m)
-	case POOL_ID:
+	} else if pool_is_it_you(ptr.tag) {
 		_pool_dispose(m)
-	case:
-		panic("matryoshka_dispose: unknown system id or not an infrastructure item")
+	} else {
+		panic("matryoshka_dispose: unknown tag or not an infrastructure item")
 	}
 }

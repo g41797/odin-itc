@@ -48,30 +48,29 @@ You cast only inside matryoshka.
 
 ---
 
-## ID rules
+## Tag rules
 
-One field.  
-Two meanings by convention.
+One field.
+One rule: nil is invalid.
 
-| Value | Meaning        |
-| ----- | -------------- |
-| `0`   | invalid        |
-| `> 0` | user data      |
-| `< 0` | infrastructure |
+| Value | Meaning |
+| ----- | ------- |
+| `nil` | invalid |
+| `&mailbox_tag` | mailbox infrastructure |
+| `&pool_tag` | pool infrastructure |
+| any other non-nil | user data |
 
 Examples:
 
 ```odin
-ID_MAILBOX = -1
-ID_POOL    = -2
+MAILBOX_TAG: rawptr = &mailbox_tag
+POOL_TAG:    rawptr = &pool_tag
 ```
 
-**Common behavior:** All Mailbox/Pool operations validate the handle's ID. If the ID does not match `ID_MAILBOX` or `ID_POOL` respectively, the operation will `panic`.
+**Common behavior:** All Mailbox/Pool operations validate the handle's tag. If the tag does not match `MAILBOX_TAG` or `POOL_TAG` respectively, the operation will `panic`.
 
-Do not mix ranges.
-
-User owns positive ids.  
-Matryoshka uses negative ids.
+User tags and infrastructure tags never collide.
+Each is a unique file-scope address.
 
 ---
 
@@ -118,7 +117,7 @@ How it works:
 
 * Check `m == nil` → return
 * Check `m^ == nil` → return
-* Read `m^.id`
+* Read `m^.tag`
 * Cast to internal type
 * Check state
 
@@ -199,5 +198,5 @@ Use only if you know why.
 
 You cannot do this.  
 Do not try to get/put Mailboxes or Pools into a Pool.  
-If the pool is open, it will treat them as a "foreign" id and panic.
+If the pool is open, it will treat them as a "foreign" tag and panic.
 

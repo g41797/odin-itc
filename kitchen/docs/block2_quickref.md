@@ -58,7 +58,7 @@ Mailbox
 - blocking, with optional timeout.
 - supports interrupt and close.
 
-**Common behavior:** All mailbox operations validate the handle's ID. If the ID is not `MAILBOX_ID` (-1), the operation will `panic`.
+**Common behavior:** All mailbox operations validate the handle's tag. If the tag is not `MAILBOX_TAG`, the operation will `panic`.
 
 Mailbox holds ownership during transit.
 
@@ -113,7 +113,7 @@ Handover rules:
 |-------|----------|
 | `m == nil` | returns `.Invalid` |
 | `m^ == nil` | returns `.Invalid` |
-| `m^.id == 0` | returns `.Invalid` |
+| `m^.tag == nil` | returns `.Invalid` |
 | `m^ != nil` | proceed |
 
 
@@ -128,7 +128,7 @@ Result:
 On non-Ok, the item is still yours.
 Dispose or retry.
 
-Note: `mbox_send` returns `.Invalid` on `id == 0` — the caller can recover and dispose the item.
+Note: `mbox_send` returns `.Invalid` on `tag == nil` — the caller can recover and dispose the item.
 
 ---
 

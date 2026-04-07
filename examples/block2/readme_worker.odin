@@ -24,12 +24,11 @@ worker_proc :: proc(t: ^thread.Thread) {
 				continue
 			}
 
-			// Process based on id.
-			#partial switch ItemId(ptr.id) {
-			case .Event:
+			// Process based on tag.
+			if event_is_it_you(ptr.tag) {
 				ev := (^Event)(ptr)
 				fmt.printfln("Worker: received Event code=%d, msg=%s", ev.code, ev.message)
-			case .Sensor:
+			} else if sensor_is_it_you(ptr.tag) {
 				s := (^Sensor)(ptr)
 				fmt.printfln("Worker: received Sensor name=%s, val=%f", s.name, s.value)
 			}
@@ -66,7 +65,7 @@ example_readme_worker :: proc() -> bool {
 	defer thread.destroy(t)
 
 	// Send an Event.
-	mi_e := ctor(&m.builder, int(ItemId.Event))
+	mi_e := ctor(&m.builder, EVENT_TAG)
 	if mi_e != nil {
 		ptr, _ := mi_e.?
 		ev := (^Event)(ptr)
@@ -79,7 +78,7 @@ example_readme_worker :: proc() -> bool {
 	}
 
 	// Send a Sensor.
-	mi_s := ctor(&m.builder, int(ItemId.Sensor))
+	mi_s := ctor(&m.builder, SENSOR_TAG)
 	if mi_s != nil {
 		ptr, _ := mi_s.?
 		s := (^Sensor)(ptr)

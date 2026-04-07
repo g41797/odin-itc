@@ -56,13 +56,13 @@ Ownership changes ONLY via:
 ## 4. Type Safety
 
 - All casts from `^PolyNode` are unsafe.
-- You MUST validate `id` before casting.
+- You MUST validate `tag` before casting.
 
 ```odin
-if ptr.id != ExpectedId {
+if !my_is_it_you(ptr.tag) {
     panic("invalid type")
 }
-````
+```
 
 * Using wrong type is undefined behavior.
 
@@ -195,18 +195,18 @@ The following are ALWAYS bugs:
 * item in multiple containers
 * use after transfer
 * use after free
-* missing `id` validation
+* missing `tag` validation
 * disposing active mailbox or pool
 * items escaping during shutdown
 
 ---
 
-## 14. Infrastructure ID Validation
+## 14. Infrastructure Tag Validation
 
-- `Mailbox` MUST have `id == MAILBOX_ID` (-1).
-- `Pool` MUST have `id == POOL_ID` (-2).
-- All infrastructure API calls (`mbox_*`, `pool_*`) MUST validate the handle's ID.
-- An API call with an invalid ID MUST `panic` immediately.
+- `Mailbox` MUST have `tag == MAILBOX_TAG`.
+- `Pool` MUST have `tag == POOL_TAG`.
+- All infrastructure API calls (`mbox_*`, `pool_*`) MUST validate the handle's tag.
+- An API call with an invalid tag MUST `panic` immediately.
 
 ---
 

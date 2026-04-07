@@ -35,7 +35,7 @@ example_request_response :: proc() -> bool {
 			}
 
 			ptr, _ := mi.?
-			if ItemId(ptr.id) == .Event {
+			if event_is_it_you(ptr.tag) {
 				ev := (^Event)(ptr)
 				fmt.printfln("Master B: received Request %d", ev.code)
 
@@ -67,7 +67,7 @@ example_request_response :: proc() -> bool {
 	defer thread.destroy(t_b)
 
 	// Master A: sends request to B, waits for response.
-	mi := ctor(&m_a.builder, int(ItemId.Event))
+	mi := ctor(&m_a.builder, EVENT_TAG)
 	if mi != nil {
 		ptr, _ := mi.?
 		ev := (^Event)(ptr)

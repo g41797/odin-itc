@@ -7,10 +7,10 @@ Follow this unless you have a reason not to.
 ## 1. Always check type before cast
 
 ```odin
-if ptr.id != ChunkId {
+if !chunk_is_it_you(ptr.tag) {
     panic("wrong type")
 }
-````
+```
 
 No shortcuts.
 

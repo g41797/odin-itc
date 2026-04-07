@@ -7,8 +7,8 @@ package matryoshka
 // Recycler is the implementation of these hooks.
 PoolHooks :: struct {
 	ctx:    rawptr, // User-provided context, passed back to hooks.
-	ids:    [dynamic]int, // List of valid Item IDs this pool manages. All must be > 0.
-	on_get: proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem), // Called to create or reinit.
+	tags:   [dynamic]rawptr, // Tags of item types this pool manages. All must be != nil.
+	on_get: proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem), // Called to create or reinit.
 	on_put: proc(ctx: rawptr, in_pool_count: int, m: ^MayItem), // Called to keep or dispose.
 }
 

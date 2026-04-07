@@ -62,11 +62,11 @@ See the result table below.
 
 ## Recycler — your hooks for the pool
 
-Builder from Doll 1 creates and destroys by id.
+Builder from Doll 1 creates and destroys by tag.
 Recycler extends that idea.
 
-In standalone code (Doll 1–2), Builder creates and destroys directly.  
-In pooled code (Doll 3+), `on_get` and `on_put` take over that role.  
+In standalone code (Doll 1–2), Builder creates and destroys directly.
+In pooled code (Doll 3+), `on_get` and `on_put` take over that role.
 Recycler replaces Builder when you have a pool.
 
 Recycler adds:
@@ -75,21 +75,21 @@ Recycler adds:
 - **Policy** — decide whether to keep or drop.
 - **Counts** — `in_pool_count` tells how many items are idle.
 - **Context** — `ctx` carries your state.
-- **Setup** — `ids` declares which item types this pool handles.
+- **Setup** — `tags` declares which item types this pool handles.
 
 ```
 Builder (Doll 1):   ctor + dtor + alloc
-Recycler (Doll 3):  on_get + on_put + ctx + ids
+Recycler (Doll 3):  on_get + on_put + ctx + tags
 ```
 
 ### PoolHooks
 
 ```odin
 PoolHooks :: struct {
-    ctx:    rawptr,         // user context — carries master or any state
-                            // may be nil — pool passes it as-is
-    ids:    [dynamic]int,   // user-owned; non-empty, all > 0; user deletes in freeMaster
-    on_get: proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem),
+    ctx:    rawptr,           // user context — carries master or any state
+                              // may be nil — pool passes it as-is
+    tags:   [dynamic]rawptr,  // user-owned; non-empty, all != nil; user deletes in freeMaster
+    on_get: proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem),
     on_put: proc(ctx: rawptr, in_pool_count: int, m: ^MayItem),
 }
 ```
@@ -102,7 +102,7 @@ Both are required.
 Pool passes it as-is.
 Hook must handle nil `ctx` safely.
 
-`ids` is a `[dynamic]int` owned by the user:
+`tags` is a `[dynamic]rawptr` owned by the user:
 
 - Populate with `append` before calling `pool_init`.
 - Delete in `freeMaster` before `free(master, alloc)`.
@@ -120,10 +120,10 @@ Hook decides what to do.
 
 | Entry state | Meaning | Hook must |
 |-------------|---------|-----------|
-| `m^ == nil` | no item available | create a new item, set `node.id = id`, set `m^` |
+| `m^ == nil` | no item available | create a new item, set `node.tag = tag`, set `m^` |
 | `m^ != nil` | recycled item | reinitialize for reuse |
 
-`in_pool_count`: number of items with this `id` currently idle in the pool.
+`in_pool_count`: number of items with this `tag` currently idle in the pool.
 Not total live objects.
 
 After `on_get`:
@@ -140,7 +140,7 @@ Hook may return nil on purpose.
 
 Called during `pool_put`, outside lock.
 
-`in_pool_count`: current count of items with this id currently idle in the pool.
+`in_pool_count`: current count of items with this tag currently idle in the pool.
 
 After `on_put`:
 
@@ -169,7 +169,7 @@ Does not know your types.
 Pool is just storage.
 All lifecycle decisions live in `PoolHooks`.
 
-**Common behavior:** All pool operations validate the handle's ID. If the ID is not `POOL_ID` (-2), the operation will `panic`.
+**Common behavior:** All pool operations validate the handle's tag. If the tag is not `POOL_TAG`, the operation will `panic`.
 
 ### Types
 
@@ -205,6 +205,7 @@ matryoshka_dispose :: proc(m: ^MayItem)
 - Takes `^PoolHooks`.
 - Pool stores the pointer.
 - User keeps the struct.
+
 `pool_close` rule:
 
 ```odin
@@ -221,9 +222,8 @@ nodes, h := pool_close(p)
 ### get — acquire ownership
 
 ```odin
-pool_get :: proc(p: Pool, id: int, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get_Result
+pool_get :: proc(p: Pool, tag: rawptr, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get_Result
 ```
-
 
 | Mode | Behavior |
 |------|----------|
@@ -245,16 +245,16 @@ Both `pool_get` and `pool_get_wait` apply the same entry checks:
 
 | Priority | Check | Result |
 |----------|-------|--------|
-| 1 | `id == 0` | **panic** — zero id is always a programming error |
+| 1 | `tag == nil` | **panic** — nil tag is always a programming error |
 | 2 | `m^ != nil` | `.Already_In_Use` — caller holds an unreleased item |
 | 3 | pool closed | `.Closed` |
-| 4 | `id` not in registered set (open pool only) | **panic** — foreign id is a programming error |
+| 4 | `tag` not in registered set (open pool only) | **panic** — foreign tag is a programming error |
 | 5 | proceed with get logic | — |
 
 ### get_wait — block until item available
 
 ```odin
-pool_get_wait :: proc(p: Pool, id: int, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result
+pool_get_wait :: proc(p: Pool, tag: rawptr, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result
 ```
 
 Equivalent to `pool_get(.Available_Only)` but with blocking.
@@ -287,30 +287,30 @@ pool_put :: proc(p: Pool, m: ^MayItem)
 
 How it works:
 
-1. Check `m.?.id`:
-   - `id == 0` → **PANIC** (zero is always invalid)
-   - `id not in ids[]` → **PANIC** (not registered — programming error)
-     > **Implementation note:** Odin's `in` operator does not work on `[dynamic]int`. Use `slice.contains(hooks.ids[:], id)`.
-2. Get `in_pool_count` for this id (under lock, then unlock)
+1. Check `m.?.tag`:
+   - `tag == nil` → **PANIC** (nil is always invalid)
+   - `tag not in tags[]` → **PANIC** (not registered — programming error)
+     > **Implementation note:** Odin's `in` operator does not work on `[dynamic]rawptr`. Use `slice.contains(hooks.tags[:], tag)`.
+2. Get `in_pool_count` for this tag (under lock, then unlock)
 3. Call `hooks.on_put(ctx, in_pool_count, m)` — **outside lock**
 4. If `m^` is still non-nil → push to free-list, increment count, set `m^ = nil` (under lock)
 
 Open pool → `on_put` decides: hook sets `m^=nil` (disposed) or leaves `m^!=nil` (stored).
 
-> **Closed pool + valid id:** `pool_put` returns with `m^` still non-nil. Caller owns the item.
+> **Closed pool + valid tag:** `pool_put` returns with `m^` still non-nil. Caller owns the item.
 > Must dispose manually. Does not panic.
 
 ### defer pool_put — when is it safe?
 
 `pool_put` with `m^ == nil` is always a no-op.
-No id check. No panic.
+No tag check. No panic.
 
 This means `defer pool_put` can be placed immediately after `m: MayItem`, before `pool_get`:
 
 ```odin
 m: MayItem
 defer pool_put(p, &m)  // [itc: defer-put-early] — safe: pool_put is no-op when m^ == nil
-if pool_get(p, id, .Available_Or_New, &m) != .Ok {
+if pool_get(p, CHUNK_TAG, .Available_Or_New, &m) != .Ok {
     return
 }
 // ... work ...
@@ -320,9 +320,9 @@ Three outcomes when `defer pool_put` runs:
 
 - `m^ == nil` (pool_get failed, or item was transferred) → `pool_put` is a no-op.
 - `m^ != nil` (item was not transferred) → `pool_put` recycles or `on_put` disposes.
-- `m^ != nil` with unknown id or zero id → `pool_put` panics — programming error.
+- `m^ != nil` with unknown tag or nil tag → `pool_put` panics — programming error.
 
-Safe for valid ids.
+Safe for valid tags.
 The panic is the correct behavior — it tells you exactly where the bug is.
 
 > `[itc: defer-put-early]` — candidate for `design/sync/new-idioms.md`.
@@ -334,21 +334,20 @@ pool_put_all :: proc(p: Pool, m: ^MayItem)
 ```
 
 Walks the linked list starting at `m^`, calling `pool_put` on each node.
-Panics on zero or unknown id in any node.
+Panics on nil or unknown tag in any node.
 
-If the panic occurs on node N in a chain of M nodes, nodes N+1 through M are never returned to the pool and leak. Pre-validate all ids before calling `pool_put_all` if you need to avoid this.
+If the panic occurs on node N in a chain of M nodes, nodes N+1 through M are never returned to the pool and leak. Pre-validate all tags before calling `pool_put_all` if you need to avoid this.
 
 ---
 
-## ID Rules
+## Tag Rules
 
-- Every item id must be != 0. Zero is reserved/invalid.
-- `pool_init` reads valid ids from `hooks.ids`.
+- Every item tag must be != nil. Nil is reserved/invalid.
+- `pool_init` reads valid tags from `hooks.tags`.
 - User populates with `append` before calling `pool_init`.
-- `pool_put` panics on `id == 0` (open or closed).
-- `pool_put` panics on unknown id only when the pool is **open**.
-- Post-close the pool holds no hooks and cannot validate ids.
-- Unknown id with closed pool leaves `m^` non-nil.
-- `on_get` sets `node.id` at allocation time.
-- Id values are user-defined integer constants — typically from an enum.
-
+- `pool_put` panics on `tag == nil` (open or closed).
+- `pool_put` panics on unknown tag only when the pool is **open**.
+- Post-close the pool holds no hooks and cannot validate tags.
+- Unknown tag with closed pool leaves `m^` non-nil.
+- `on_get` sets `node.tag` at allocation time.
+- Tag values are addresses of file-scope `PolyTag` variables — one per item type.

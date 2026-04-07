@@ -39,9 +39,9 @@ Every item embeds a base node at offset 0.
 ```odin
 PolyNode :: struct {
     using node: list.Node,
-    id: int,
+    tag:        rawptr,
 }
-````
+```
 
 Your types embed it:
 
@@ -207,10 +207,10 @@ For both Mailbox and Pool:
 
 ### Casting
 
-Always check `id` before casting.
+Always check `tag` before casting.
 
 ```odin
-if ptr.id == ChunkId {
+if chunk_is_it_you(ptr.tag) {
     chunk := (^Chunk)(ptr)
 }
 ```
@@ -235,7 +235,7 @@ if mbox_send(...) != .Ok {
 
 ```odin
 c := new(Chunk)
-c.id = 1
+c.tag = CHUNK_TAG
 c.value = 42
 
 m: MayItem = (^PolyNode)(c)

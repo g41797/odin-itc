@@ -13,7 +13,7 @@ example_ownership :: proc(alloc: mem.Allocator) -> bool {
 	if ev == nil {
 		return false
 	}
-	ev^.id = int(ItemId.Event)
+	ev^.tag = EVENT_TAG
 	ev.code = 99
 	ev.message = "owned"
 

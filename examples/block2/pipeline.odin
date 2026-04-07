@@ -17,7 +17,7 @@ producer_proc :: proc(t: ^thread.Thread) {
 	}
 
 	for i in 0 ..< 5 {
-		mi := ctor(&ctx.me.builder, int(ItemId.Event))
+		mi := ctor(&ctx.me.builder, EVENT_TAG)
 		if mi != nil {
 			ptr, _ := mi.?
 			ev := (^Event)(ptr)

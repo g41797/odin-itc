@@ -7,6 +7,19 @@
 
 ## Core Types
 
+### PolyTag
+
+The type for unique type identifiers.
+
+```odin
+PolyTag :: struct {
+    _: u8,
+}
+```
+
+Each item type defines one private static instance at file scope.
+The address of that instance is the unique tag for that type.
+
 ### PolyNode
 
 The header at **offset 0** in every item.
@@ -14,9 +27,9 @@ The header at **offset 0** in every item.
 ```odin
 PolyNode :: struct {
     using node: list.Node,
-    id:         int, // must be != 0
+    tag:        rawptr, // must be != nil
 }
-````
+```
 
 All items — user data and infrastructure — embed this first.
 
@@ -40,29 +53,30 @@ You must:
 
 ---
 
-## ID Rules
+## Tag Rules
 
 One field.
-Two ranges.
+One rule: nil is always invalid.
 
 ```odin
-// Convention
-id == 0   → invalid
-id > 0    → user data
-id < 0    → infrastructure
+// Define one tag per type:
+@(private)
+my_tag: PolyTag = {}
+
+MY_TAG: rawptr = &my_tag
+
+my_is_it_you :: #force_inline proc(tag: rawptr) -> bool { return tag == MY_TAG }
 ```
 
-Example:
+Infrastructure tags:
 
 ```odin
-SystemId :: enum int {
-    Invalid = 0,
-    Mailbox = -1,
-    Pool    = -2,
-}
+MAILBOX_TAG: rawptr  // address of internal mailbox_tag
+POOL_TAG:    rawptr  // address of internal pool_tag
 ```
 
-User must not use negative ids.
+User tags and infrastructure tags never collide.
+Each is a unique file-scope address.
 
 ---
 
@@ -101,7 +115,7 @@ Entry:
 
 Algorithm:
 
-* read `m^.id`
+* read `m^.tag`
 * cast to internal type
 * check state
 
@@ -128,7 +142,7 @@ Moves ownership between threads.
 Mailbox :: ^PolyNode
 ```
 
-**Common behavior:** All mailbox operations validate the handle's ID. If the ID is not `MAILBOX_ID` (-1), the operation will `panic`.
+**Common behavior:** All mailbox operations validate the handle's tag. If the tag is not `MAILBOX_TAG`, the operation will `panic`.
 
 ---
 
@@ -215,7 +229,7 @@ Provides reuse and policy.
 Pool :: ^PolyNode
 ```
 
-**Common behavior:** All pool operations validate the handle's ID. If the ID is not `POOL_ID` (-2), the operation will `panic`.
+**Common behavior:** All pool operations validate the handle's tag. If the tag is not `POOL_TAG`, the operation will `panic`.
 
 ---
 
@@ -250,7 +264,7 @@ Pool_Get_Result :: enum {
 
 pool_get :: proc(
     p: Pool,
-    id: int,
+    tag: rawptr,
     mode: Pool_Get_Mode,
     m: ^MayItem,
 ) -> Pool_Get_Result
@@ -259,7 +273,7 @@ pool_get :: proc(
 // Does not call on_get.
 pool_get_wait :: proc(
     p: Pool,
-    id: int,
+    tag: rawptr,
     m: ^MayItem,
     timeout: time.Duration,
 ) -> Pool_Get_Result
@@ -297,8 +311,8 @@ Put:
 ```odin
 PoolHooks :: struct {
     ctx:    rawptr,
-    ids:    [dynamic]int,   // all > 0
-    on_get: proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem),
+    tags:   [dynamic]rawptr,  // all != nil
+    on_get: proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem),
     on_put: proc(ctx: rawptr, in_pool_count: int, m: ^MayItem),
 }
 ```
@@ -309,7 +323,7 @@ PoolHooks :: struct {
 
 on_get:
 
-* `m^ == nil` → create new item
+* `m^ == nil` → create new item, set `node.tag = tag`
 * `m^ != nil` → reinitialize
 
 on_put:
@@ -324,8 +338,8 @@ on_put:
 
 ## Infrastructure rules
 
-* Infrastructure uses negative ids
-* Infrastructure is not pooled by default
+* Infrastructure uses reserved tags (`MAILBOX_TAG`, `POOL_TAG`)
+* Infrastructure is not pooled
 * Infrastructure must be closed before dispose
 
 ---

@@ -15,7 +15,7 @@ run_poly_maybe_example :: proc() -> bool {
 	if ev == nil {
 		return false
 	}
-	ev^.id = int(ItemId.Event)
+	ev^.tag = EVENT_TAG
 	ev.code = 7
 	ev.message = "poly-maybe"
 
@@ -39,7 +39,7 @@ run_poly_maybe_example :: proc() -> bool {
 	if !ok {
 		return false
 	}
-	if ptr.id != int(ItemId.Event) {
+	if !event_is_it_you(ptr.tag) {
 		free((^Event)(ptr), alloc)
 		return false
 	}

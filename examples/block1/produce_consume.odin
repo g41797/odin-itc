@@ -12,13 +12,12 @@ consume_list :: proc(l: ^list.List, alloc: mem.Allocator) {
 			break
 		}
 		poly := (^PolyNode)(raw)
-		switch ItemId(poly.id) {
-		case .Event:
+		if event_is_it_you(poly.tag) {
 			free((^Event)(poly), alloc)
-		case .Sensor:
+		} else if sensor_is_it_you(poly.tag) {
 			free((^Sensor)(poly), alloc)
-		case:
-			panic("unknown id")
+		} else {
+			panic("unknown tag")
 		}
 	}
 }
@@ -39,7 +38,7 @@ example_produce_consume :: proc(alloc: mem.Allocator) -> bool {
 		if ev == nil {
 			return false
 		}
-		ev^.id = int(ItemId.Event)
+		ev^.tag = EVENT_TAG
 		ev.code = i
 		ev.message = "event"
 		list.push_back(&l, &ev.poly.node)
@@ -48,13 +47,13 @@ example_produce_consume :: proc(alloc: mem.Allocator) -> bool {
 		if s == nil {
 			return false
 		}
-		s^.id = int(ItemId.Sensor)
+		s^.tag = SENSOR_TAG
 		s.name = "sensor"
 		s.value = f64(i) * 1.5
 		list.push_back(&l, &s.poly.node)
 	}
 
-	// --- Consume: pop front, dispatch on id, free ---
+	// --- Consume: pop front, dispatch on tag, free ---
 	processed := 0
 	for {
 		raw := list.pop_front(&l)
@@ -63,18 +62,16 @@ example_produce_consume :: proc(alloc: mem.Allocator) -> bool {
 		}
 		poly := (^PolyNode)(raw)
 
-		switch ItemId(poly.id) {
-		case .Event:
+		if event_is_it_you(poly.tag) {
 			ev := (^Event)(poly)
 			fmt.printfln("Event:  code=%d  message=%s", ev.code, ev.message)
 			free(ev, alloc)
-		case .Sensor:
+		} else if sensor_is_it_you(poly.tag) {
 			s := (^Sensor)(poly)
 			fmt.printfln("Sensor: name=%s  value=%f", s.name, s.value)
 			free(s, alloc)
-		case:
-			fmt.printfln("unknown id: %d", poly.id)
-			panic("unknown id")
+		} else {
+			panic("unknown tag")
 		}
 		processed += 1
 	}

@@ -47,7 +47,7 @@ example_mailbox_as_item :: proc() -> bool {
 			if raw == nil {break}
 			mi_raw: MayItem = (^PolyNode)(raw)
 			ptr_raw, _ := mi_raw.?
-			if ptr_raw.id == matryoshka.MAILBOX_ID {
+			if matryoshka.mailbox_is_it_you(ptr_raw.tag) {
 				matryoshka.mbox_close(Mailbox(ptr_raw))
 				matryoshka.matryoshka_dispose(&mi_raw)
 			}
@@ -58,7 +58,7 @@ example_mailbox_as_item :: proc() -> bool {
 	}
 
 	ptr, valid := mi.?
-	if !valid || ptr.id != matryoshka.MAILBOX_ID {
+	if !valid || !matryoshka.mailbox_is_it_you(ptr.tag) {
 		matryoshka.matryoshka_dispose(&mi)
 		matryoshka.mbox_close(mb_channel)
 		mi_ch: MayItem = (^PolyNode)(mb_channel)

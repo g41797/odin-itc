@@ -42,7 +42,7 @@ oob_receiver_proc :: proc(t: ^thread.Thread) {
 				poly := (^PolyNode)(raw)
 				mi_oob: MayItem = poly
 				ptr, _ := mi_oob.?
-				if ItemId(ptr.id) == .Event {
+				if event_is_it_you(ptr.tag) {
 					ev := (^Event)(ptr)
 					fmt.printfln("Receiver: OOB Event msg=%s", ev.message)
 				}
@@ -90,7 +90,7 @@ example_interrupt_oob :: proc() -> bool {
 	defer thread.destroy(t)
 
 	// Sender: Fill OOB mailbox first, then interrupt main mailbox.
-	mi := ctor(&m.builder, int(ItemId.Event))
+	mi := ctor(&m.builder, EVENT_TAG)
 	if mi != nil {
 		ptr, _ := mi.?
 		ev := (^Event)(ptr)

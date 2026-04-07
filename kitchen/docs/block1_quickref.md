@@ -18,22 +18,24 @@ Just clean ownership in one thread.
 
 ## PolyNode — the traveling struct
 
-<!-- snippet: polynode.odin:6-42 -->
+<!-- snippet: polynode.odin:16-52 -->
 ```odin
-import list "core:container/intrusive/list"
-// ...
+PolyTag :: struct {
+    _: u8,
+}
+
 PolyNode :: struct {
     using node: list.Node, // intrusive link — .prev, .next
-    id:         int, // type tag, must be != 0
+    tag:        rawptr,    // type discriminator, must be != nil
 }
 ```
 
 Every type that travels through matryoshka embeds `PolyNode` at **offset 0** via `using`:
 
-<!-- snippet: examples/block1/types.odin:16-20 -->
+<!-- snippet: examples/block1/types.odin:33-37 -->
 ```odin
 Event :: struct {
-    using poly: matryoshka.PolyNode, // offset 0 — required for safe cast
+    using poly: PolyNode, // offset 0 — required for safe cast
     code:       int,
     message:    string,
 }
@@ -47,24 +49,31 @@ The cast `(^Event)(node)` is valid only if `PolyNode` is first.
 - You follow it.
 - Matryoshka has no compile-time check for this.
 
-### Id rules
+### Tag rules
 
-- `id` must be != 0.
-- Zero is the zero value of `int`.
-- An uninitialized `PolyNode` would have `id == 0`.
+- `tag` must be != nil.
+- nil is the zero value of `rawptr`.
+- An uninitialized `PolyNode` has `tag == nil`.
 
 That is how you catch missing initialization — immediately.
 
-Set `id` once at creation.
+Set `tag` once at creation using a static tag address.
 
-Use an enum:
+Define one tag per type:
 
-<!-- snippet: examples/block1/types.odin:10-13 -->
+<!-- snippet: examples/block1/types.odin:14-30 -->
 ```odin
-ItemId :: enum int {
-    Event  = 1,
-    Sensor = 2,
-}
+@(private)
+event_tag: PolyTag = {}
+
+@(private)
+sensor_tag: PolyTag = {}
+
+EVENT_TAG: rawptr = &event_tag
+SENSOR_TAG: rawptr = &sensor_tag
+
+event_is_it_you :: #force_inline proc(tag: rawptr) -> bool {return tag == EVENT_TAG}
+sensor_is_it_you :: #force_inline proc(tag: rawptr) -> bool {return tag == SENSOR_TAG}
 ```
 
 ---
@@ -122,11 +131,11 @@ m: MayItem
 
 ---
 
-## Builder — create and destroy by id
+## Builder — create and destroy by tag
 
 Builder stores an allocator and provides `ctor` / `dtor` procs:
 
-<!-- snippet: examples/block1/builder.odin:7-14 -->
+<!-- snippet: examples/block1/builder.odin:7-15 -->
 ```odin
 Builder :: struct {
     alloc: mem.Allocator,
@@ -137,17 +146,17 @@ make_builder :: proc(alloc: mem.Allocator) -> Builder {
 }
 ```
 
-`ctor(b: ^Builder, id: int) -> MayItem`:
+`ctor(b: ^Builder, tag: rawptr) -> MayItem`:
 
-- Allocates the correct type for `id` using `b.alloc`.
-- Sets `poly.id`.
+- Allocates the correct type for `tag` using `b.alloc`.
+- Sets `poly.tag`.
 - Wraps the result in `MayItem`.
-- Returns nil for unknown ids or allocation failure.
+- Returns nil for unknown tags or allocation failure.
 
 `dtor(b: ^Builder, m: ^MayItem)`:
 
 - Frees the item using `b.alloc`.
 - Sets `m^ = nil`.
 - Safe to call with `m == nil` or `m^ == nil` — no-op.
-- Panics on unknown id — a programming error.
+- Panics on unknown tag — a programming error.
 

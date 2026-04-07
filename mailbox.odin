@@ -13,6 +13,10 @@ import "core:time"
 Mailbox :: ^PolyNode
 ////////////////////
 
+@(private)
+mailbox_tag: PolyTag = {}
+MAILBOX_TAG: rawptr = &mailbox_tag
+mailbox_is_it_you :: #force_inline proc(tag: rawptr) -> bool {return tag == MAILBOX_TAG}
 
 @(private)
 _Mbox :: struct {
@@ -34,7 +38,7 @@ mbox_new :: proc(alloc: mem.Allocator) -> Mailbox {
 	}
 
 	mbx^.alctr = alloc
-	mbx^.id = MAILBOX_ID
+	mbx^.tag = MAILBOX_TAG
 
 	return cast(Mailbox)mbx
 }
@@ -49,7 +53,7 @@ mbox_send :: proc(mb: Mailbox, m: ^MayItem) -> SendResult {
 
 	mbx_Ptr := _unwrap(mb)
 
-	if mbx_Ptr^.id != MAILBOX_ID {
+	if !mailbox_is_it_you(mbx_Ptr^.tag) {
 		panic("non-mailbox is used for mailbox operations")
 	}
 
@@ -63,7 +67,7 @@ mbox_send :: proc(mb: Mailbox, m: ^MayItem) -> SendResult {
 		return .Invalid
 	}
 
-	if ptr^.id == 0 {
+	if ptr^.tag == nil {
 		return .Invalid
 	}
 
@@ -108,7 +112,7 @@ mbox_wait_receive :: proc(mb: Mailbox, m: ^MayItem, timeout: time.Duration = -1)
 
 	mbx_Ptr := _unwrap(mb)
 
-	if mbx_Ptr^.id != MAILBOX_ID {
+	if !mailbox_is_it_you(mbx_Ptr^.tag) {
 		panic("non-mailbox is used for mailbox operations")
 	}
 
@@ -178,7 +182,7 @@ try_receive_batch :: proc(mb: Mailbox) -> (list.List, RecvResult) {
 
 	mbx_Ptr := _unwrap(mb)
 
-	if mbx_Ptr^.id != MAILBOX_ID {
+	if !mailbox_is_it_you(mbx_Ptr^.tag) {
 		panic("non-mailbox is used for mailbox operations")
 	}
 
@@ -220,7 +224,7 @@ mbox_interrupt :: proc(mb: Mailbox) -> IntrResult {
 
 	mbx_Ptr := _unwrap(mb)
 
-	if mbx_Ptr^.id != MAILBOX_ID {
+	if !mailbox_is_it_you(mbx_Ptr^.tag) {
 		panic("non-mailbox is used for mailbox operations")
 	}
 
@@ -248,7 +252,7 @@ mbox_close :: proc(mb: Mailbox) -> list.List {
 
 	mbx_Ptr := _unwrap(mb)
 
-	if mbx_Ptr^.id != MAILBOX_ID {
+	if !mailbox_is_it_you(mbx_Ptr^.tag) {
 		panic("non-mailbox is used for mailbox operations")
 	}
 

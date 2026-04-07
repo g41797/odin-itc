@@ -37,7 +37,7 @@ test_mbox_send_receive :: proc(t: ^testing.T) {
 
 	// Create an item using Layer 1 builder.
 	b := ex1.make_builder(context.allocator)
-	mi := ex1.ctor(&b, int(ex1.ItemId.Event))
+	mi := ex1.ctor(&b, ex1.EVENT_TAG)
 	testing.expect(t, mi != nil, "ctor should not return nil")
 
 	ptr, _ := mi.?
@@ -76,7 +76,7 @@ test_mbox_fifo :: proc(t: ^testing.T) {
 	
 	// Send 1, 2, 3.
 	for i in 1..=3 {
-		mi := ex1.ctor(&b, int(ex1.ItemId.Event))
+		mi := ex1.ctor(&b, ex1.EVENT_TAG)
 		ptr, _ := mi.?
 		(^ex1.Event)(ptr).code = i
 		matryoshka.mbox_send(mb, &mi)
@@ -132,9 +132,9 @@ test_mbox_close_returns_remaining :: proc(t: ^testing.T) {
 	b := ex1.make_builder(context.allocator)
 
 	// Send 2 items.
-	mi1 := ex1.ctor(&b, int(ex1.ItemId.Event))
+	mi1 := ex1.ctor(&b, ex1.EVENT_TAG)
 	matryoshka.mbox_send(mb, &mi1)
-	mi2 := ex1.ctor(&b, int(ex1.ItemId.Event))
+	mi2 := ex1.ctor(&b, ex1.EVENT_TAG)
 	matryoshka.mbox_send(mb, &mi2)
 
 	remaining := matryoshka.mbox_close(mb)
@@ -164,7 +164,7 @@ test_mbox_try_receive_batch :: proc(t: ^testing.T) {
 
 	// Send 3 items.
 	for _ in 1..=3 {
-		mi := ex1.ctor(&b, int(ex1.ItemId.Event))
+		mi := ex1.ctor(&b, ex1.EVENT_TAG)
 		matryoshka.mbox_send(mb, &mi)
 	}
 
@@ -200,11 +200,11 @@ test_mbox_invalid_inputs :: proc(t: ^testing.T) {
 	res2 := matryoshka.mbox_send(mb, &var_mi)
 	testing.expect(t, res2 == .Invalid, "mbox_send with empty MayItem should return .Invalid")
 
-	// MayItem with id == 0.
+	// MayItem with tag == nil (uninitialized node).
 	poly0 := new(PolyNode, context.allocator)
-	poly0.id = 0
+	poly0.tag = nil
 	mi0: MayItem = poly0
 	res3 := matryoshka.mbox_send(mb, &mi0)
-	testing.expect(t, res3 == .Invalid, "mbox_send with id == 0 should return .Invalid")
+	testing.expect(t, res3 == .Invalid, "mbox_send with tag == nil should return .Invalid")
 	free(poly0)
 }

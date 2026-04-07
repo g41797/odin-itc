@@ -47,7 +47,7 @@ Usage:
 <!-- snippet: examples/block1/example_builder.odin:8-11 -->
 ```odin
 b := make_builder(alloc)
-m := ctor(&b, int(ItemId.Event))
+m := ctor(&b, EVENT_TAG)
 ```
 
 ### Example procs
@@ -73,7 +73,7 @@ If an allocation fails mid-loop, the defer cleans up everything already added.
 defer drain_list(&l, alloc)
 ```
 
-The process remaining helper pops and frees all items by id:
+The process remaining helper pops and frees all items by tag:
 
 <!-- snippet: examples/block1/produce_consume.odin:8-23 -->
 ```odin
@@ -84,13 +84,12 @@ drain_list :: proc(l: ^list.List, alloc: mem.Allocator) {
             break
         }
         poly := (^PolyNode)(raw)
-        switch ItemId(poly.id) {
-        case .Event:
+        if event_is_it_you(poly.tag) {
             free((^Event)(poly), alloc)
-        case .Sensor:
+        } else if sensor_is_it_you(poly.tag) {
             free((^Sensor)(poly), alloc)
-        case:
-            panic("unknown id")
+        } else {
+            panic("unknown tag")
         }
     }
 }
@@ -104,20 +103,20 @@ Transfer to a closed pool or mailbox leaves `m^` non-nil — you still own it.
 
 ---
 
-## Unknown id
+## Unknown tag
 
-Allocation and deallocation handle unknown ids differently.
+Allocation and deallocation handle unknown tags differently.
 
 ### Allocation (ctor, new, make)
 
-Return `nil` for unknown id.
-Unknown id at allocation time is a caller mistake — maybe a wrong constant, maybe a missing enum case.
+Return `nil` for unknown tag.
+Unknown tag at allocation time is a caller mistake — maybe a wrong constant, maybe a wrong pointer.
 Returning nil lets the caller handle it the same way as allocation failure.
 
 ### Deallocation (dtor, free, process remaining)
 
-Panic on unknown id.
-If you are freeing an item with an unknown id, the item should never have existed.
+Panic on unknown tag.
+If you are freeing an item with an unknown tag, the item should never have existed.
 This is a programming error — not a runtime condition.
 Panic immediately. Do not silently free. Do not return an error.
 
@@ -135,9 +134,9 @@ But when something breaks, you will come back here.
 | R1 | `m^` is the ownership bit. Non-nil = you own it. | Double-free or leak. |
 | R2 | All callbacks called outside pool mutex. | Guaranteed by pool. User may hold their own locks inside callbacks. |
 | R3 | `on_get` is called on every `pool_get` except `Available_Only` — `on_get` is never called for `Available_Only`. | Hook handles both create (`m^==nil`) and reinitialize (`m^!=nil`). |
-| R4 | Pool maintains per-id `in_pool_count`. Passed to `on_get` and `on_put`. | Enables flow control. |
-| R5 | `id == 0` on `pool_put` or `mbox_send` → immediate panic or `.Invalid`. | Programming errors surface immediately. |
-| R6 | Unknown id on `pool_put` → **panic** if pool is open. Closed pool: `m^` stays non-nil — caller owns the item. | Open pool: unknown id is a programming error — panic surfaces it immediately. Closed pool: pool can no longer manage items, so ownership is returned to caller for clean shutdown. |
+| R4 | Pool maintains per-tag `in_pool_count`. Passed to `on_get` and `on_put`. | Enables flow control. |
+| R5 | `tag == nil` on `pool_put` or `mbox_send` → immediate panic or `.Invalid`. | Programming errors surface immediately. |
+| R6 | Unknown tag on `pool_put` → **panic** if pool is open. Closed pool: `m^` stays non-nil — caller owns the item. | Open pool: unknown tag is a programming error — panic surfaces it immediately. Closed pool: pool can no longer manage items, so ownership is returned to caller for clean shutdown. |
 | R7 | `on_put`: if `m^ != nil` after hook → pool stores it. If `m^ == nil` → pool discards. | Hook sets `m^ = nil` to dispose. |
 | R8 | Always use `ptr, ok := m.?` to read the inner value of `MayItem`. Never use the single-value form `ptr := m.?`. | Single-value form panics if nil. |
 | R9 | `ctx` must outlive the pool. Do not tie `ctx` to a stack object or any resource freed before `pool_close`. | Hook called after `ctx` freed → use-after-free. |

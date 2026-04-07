@@ -13,8 +13,8 @@ example_seeding :: proc() -> bool {
 		on_get = master_on_get,
 		on_put = master_on_put,
 	}
-	append(&hooks.ids, int(ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, EVENT_TAG)
+	defer delete(hooks.tags)
 
 	p := matryoshka.pool_new(alloc)
 	matryoshka.pool_init(p, &hooks)
@@ -23,18 +23,18 @@ example_seeding :: proc() -> bool {
 	// We use .New_Only to force creation of new items even if some were already present.
 	for _ in 0..<10 {
 		mi: MayItem
-		if matryoshka.pool_get(p, int(ItemId.Event), .New_Only, &mi) == .Ok {
+		if matryoshka.pool_get(p, EVENT_TAG, .New_Only, &mi) == .Ok {
 			matryoshka.pool_put(p, &mi)
 		}
 	}
 
 	// Verify that we can get 10 items without creating new ones.
-	// (Though Available_Or_New would also call on_get for reinit, 
+	// (Though Available_Or_New would also call on_get for reinit,
 	// here we just want to see if the pool is full).
-	
+
 	items: [10]MayItem
 	for i in 0..<10 {
-		if matryoshka.pool_get(p, int(ItemId.Event), .Available_Only, &items[i]) != .Ok {
+		if matryoshka.pool_get(p, EVENT_TAG, .Available_Only, &items[i]) != .Ok {
 			// Cleanup what we got so far.
 			for j in 0..=i { matryoshka.pool_put(p, &items[j]) }
 			return false

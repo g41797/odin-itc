@@ -19,7 +19,7 @@ An **intrusive** queue puts the link inside your struct:
 ```
 [ your struct                 ]   ← one allocation
     PolyNode.next ──────────────► next item in queue
-    PolyNode.id
+    PolyNode.tag
     your fields...
 ```
 
@@ -43,11 +43,11 @@ They don't know what is inside.
 
 All concrete type knowledge lives in user code.
 
-`PolyNode.id` tells you the type. It makes the cast safe:
+`PolyNode.tag` tells you the type. It makes the cast safe:
 
-- Zero is always invalid.
-- Unknown id is a programming error.
-- Known id → you can cast. Correctness is on you.
+- nil is always invalid.
+- Unknown tag is a programming error.
+- Known tag → you can cast. Correctness is on you.
 
 ---
 
@@ -123,7 +123,7 @@ This is _discipline_, not enforcement.
 
 ## Builder example: Event + Sensor
 
-<!-- snippet: examples/block1/builder.odin:7-58 -->
+<!-- snippet: examples/block1/builder.odin:7-56 -->
 ```odin
 Builder :: struct {
     alloc: mem.Allocator,
@@ -133,25 +133,23 @@ make_builder :: proc(alloc: mem.Allocator) -> Builder {
     return Builder{alloc = alloc}
 }
 
-ctor :: proc(b: ^Builder, id: int) -> MayItem {
-    switch ItemId(id) {
-    case .Event:
+ctor :: proc(b: ^Builder, tag: rawptr) -> MayItem {
+    if event_is_it_you(tag) {
         ev := new(Event, b.alloc)
         if ev == nil {
             return nil
         }
-        ev^.id = id
+        ev^.tag = EVENT_TAG
         return MayItem(&ev.poly)
-    case .Sensor:
+    } else if sensor_is_it_you(tag) {
         s := new(Sensor, b.alloc)
         if s == nil {
             return nil
         }
-        s^.id = id
+        s^.tag = SENSOR_TAG
         return MayItem(&s.poly)
-    case:
-        return nil
     }
+    return nil
 }
 
 dtor :: proc(b: ^Builder, m: ^MayItem) {
@@ -162,17 +160,12 @@ dtor :: proc(b: ^Builder, m: ^MayItem) {
     if !ok {
         return
     }
-    switch ItemId(ptr.id) {
-    case .Event:
+    if event_is_it_you(ptr.tag) {
         free((^Event)(ptr), b.alloc)
-    case .Sensor:
+    } else if sensor_is_it_you(ptr.tag) {
         free((^Sensor)(ptr), b.alloc)
-    case:
-        if ptr.id == 999 { // EXIT_ID
-            free(ptr, b.alloc)
-        } else {
-            panic("unknown id")
-        }
+    } else {
+        panic("unknown tag")
     }
     m^ = nil
 }
@@ -186,7 +179,7 @@ This is the manual way — without Builder:
 ```odin
 ev := new(Event, alloc)
 // ...
-ev^.id = int(ItemId.Event)
+ev^.tag = EVENT_TAG
 ev.code = 99
 ev.message = "owned"
 // ...
@@ -199,13 +192,13 @@ With Builder:
 ```odin
 b := make_builder(alloc)
 // ...
-m := ctor(&b, int(ItemId.Event))
+m := ctor(&b, EVENT_TAG)
 ```
 
 Builder prevents the mistakes:
 
 - You don't think about wrapping.
-- You don't forget to set id.
+- You don't forget to set tag.
 - You don't accidentally `defer free` the original pointer.
 
 ### Standalone use
@@ -230,10 +223,10 @@ Use it, change it, or write your own.
 Allocate items.
 Push to intrusive list:
 
-<!-- snippet: examples/block1/produce_consume.odin:32-55 -->
+<!-- snippet: examples/block1/produce_consume.odin:34-55 -->
 ```odin
-// Drain on any exit path — no-op if list is already empty.
-defer drain_list(&l, alloc)
+// Consume on any exit path — no-op if list is already empty.
+defer consume_list(&l, alloc)
 
 // --- Produce: N pairs of (Event, Sensor) ---
 N :: 3
@@ -242,7 +235,7 @@ for i in 0 ..< N {
     if ev == nil {
         return false
     }
-    ev^.id = int(ItemId.Event)
+    ev^.tag = EVENT_TAG
     ev.code = i
     ev.message = "event"
     list.push_back(&l, &ev.poly.node)
@@ -251,7 +244,7 @@ for i in 0 ..< N {
     if s == nil {
         return false
     }
-    s^.id = int(ItemId.Sensor)
+    s^.tag = SENSOR_TAG
     s.name = "sensor"
     s.value = f64(i) * 1.5
     list.push_back(&l, &s.poly.node)
@@ -261,7 +254,7 @@ for i in 0 ..< N {
 ### Consume
 
 - Pop from list.
-- Dispatch on id.
+- Dispatch on tag.
 - Process.
 - Free:
 
@@ -274,18 +267,16 @@ for {
     }
     poly := (^PolyNode)(raw)
 
-    switch ItemId(poly.id) {
-    case .Event:
+    if event_is_it_you(poly.tag) {
         ev := (^Event)(poly)
         fmt.printfln("Event:  code=%d  message=%s", ev.code, ev.message)
         free(ev, alloc)
-    case .Sensor:
+    } else if sensor_is_it_you(poly.tag) {
         s := (^Sensor)(poly)
         fmt.printfln("Sensor: name=%s  value=%f", s.name, s.value)
         free(s, alloc)
-    case:
-        fmt.printfln("unknown id: %d", poly.id)
-        panic("unknown id")
+    } else {
+        panic("unknown tag")
     }
     processed += 1
 }

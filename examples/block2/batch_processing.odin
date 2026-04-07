@@ -62,7 +62,7 @@ example_batch_processing :: proc() -> bool {
 
 	// Send several items rapidly.
 	for _ in 0 ..< 10 {
-		mi := ctor(&m.builder, int(ItemId.Event))
+		mi := ctor(&m.builder, EVENT_TAG)
 		if mi != nil {
 			if matryoshka.mbox_send(m.inbox, &mi) != .Ok {
 				dtor(&m.builder, &mi)

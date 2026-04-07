@@ -14,14 +14,19 @@ Pool :: ^PolyNode
 ////////////////////
 
 @(private)
+pool_tag: PolyTag = {}
+POOL_TAG: rawptr = &pool_tag
+pool_is_it_you :: #force_inline proc(tag: rawptr) -> bool {return tag == POOL_TAG}
+
+@(private)
 _Pool :: struct {
 	using poly: PolyNode,
 	alctr:      mem.Allocator,
 	mutex:      sync.Mutex,
 	cond:       sync.Cond,
 	hooks:      ^PoolHooks,
-	lists:      map[int]list.List, // Free-lists per item ID.
-	counts:     map[int]int,       // Number of idle items per item ID.
+	lists:      map[rawptr]list.List, // Free-lists per item tag.
+	counts:     map[rawptr]int,       // Number of idle items per item tag.
 	closed:     bool,
 }
 
@@ -33,9 +38,9 @@ pool_new :: proc(alloc: mem.Allocator) -> Pool {
 	}
 
 	p^.alctr = alloc
-	p^.id = POOL_ID
-	p^.lists = make(map[int]list.List, 16, alloc)
-	p^.counts = make(map[int]int, 16, alloc)
+	p^.tag = POOL_TAG
+	p^.lists = make(map[rawptr]list.List, 16, alloc)
+	p^.counts = make(map[rawptr]int, 16, alloc)
 
 	return cast(Pool)p
 }
@@ -44,7 +49,7 @@ pool_new :: proc(alloc: mem.Allocator) -> Pool {
 // Panics if the pool handle is invalid.
 pool_init :: proc(p: Pool, hooks: ^PoolHooks) {
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_init")
 	}
 
@@ -52,13 +57,13 @@ pool_init :: proc(p: Pool, hooks: ^PoolHooks) {
 		panic("pool_init: hooks cannot be nil")
 	}
 
-	if len(hooks.ids) == 0 {
-		panic("pool_init: hooks.ids cannot be empty")
+	if len(hooks.tags) == 0 {
+		panic("pool_init: hooks.tags cannot be empty")
 	}
 
-	for id in hooks.ids {
-		if id <= 0 {
-			panic("pool_init: all ids must be positive")
+	for tag in hooks.tags {
+		if tag == nil {
+			panic("pool_init: all tags must be non-nil")
 		}
 	}
 
@@ -76,7 +81,7 @@ pool_init :: proc(p: Pool, hooks: ^PoolHooks) {
 // Further get/put operations will fail or behave as no-ops.
 pool_close :: proc(p: Pool) -> (list.List, ^PoolHooks) {
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_close")
 	}
 
@@ -95,8 +100,8 @@ pool_close :: proc(p: Pool) -> (list.List, ^PoolHooks) {
 	ptr.hooks = nil
 
 	// Consolidate all items from all free-lists into one list.
-	for id in ptr.lists {
-		if list_ptr, ok := ptr.lists[id]; ok {
+	for tag in ptr.lists {
+		if list_ptr, ok := ptr.lists[tag]; ok {
 			for {
 				node := list.pop_front(&list_ptr)
 				if node == nil { break }
@@ -113,14 +118,14 @@ pool_close :: proc(p: Pool) -> (list.List, ^PoolHooks) {
 }
 
 // pool_get acquires an item from the pool.
-pool_get :: proc(p: Pool, id: int, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get_Result {
+pool_get :: proc(p: Pool, tag: rawptr, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get_Result {
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_get")
 	}
 
-	if id == 0 {
-		panic("pool_get: id cannot be 0")
+	if tag == nil {
+		panic("pool_get: tag cannot be nil")
 	}
 
 	if m == nil {
@@ -133,11 +138,11 @@ pool_get :: proc(p: Pool, id: int, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get
 
 	switch mode {
 	case .Available_Or_New:
-		return _pool_get_available_or_new(ptr, id, m)
+		return _pool_get_available_or_new(ptr, tag, m)
 	case .New_Only:
-		return _pool_get_new_only(ptr, id, m)
+		return _pool_get_new_only(ptr, tag, m)
 	case .Available_Only:
-		return _pool_get_available_only(ptr, id, m)
+		return _pool_get_available_only(ptr, tag, m)
 	}
 
 	return .Not_Available
@@ -145,14 +150,14 @@ pool_get :: proc(p: Pool, id: int, mode: Pool_Get_Mode, m: ^MayItem) -> Pool_Get
 
 // pool_get_wait blocks until an item is available in the pool.
 // Never calls on_get.
-pool_get_wait :: proc(p: Pool, id: int, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result {
+pool_get_wait :: proc(p: Pool, tag: rawptr, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result {
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_get_wait")
 	}
 
-	if id == 0 {
-		panic("pool_get_wait: id cannot be 0")
+	if tag == nil {
+		panic("pool_get_wait: tag cannot be nil")
 	}
 
 	if m == nil {
@@ -163,7 +168,7 @@ pool_get_wait :: proc(p: Pool, id: int, m: ^MayItem, timeout: time.Duration) -> 
 		return .Already_In_Use
 	}
 
-	return _pool_get_wait_impl(ptr, id, m, timeout)
+	return _pool_get_wait_impl(ptr, tag, m, timeout)
 }
 
 // pool_put returns an item to the pool.
@@ -173,16 +178,16 @@ pool_put :: proc(p: Pool, m: ^MayItem) {
 	}
 
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_put")
 	}
 
 	node, _ := m^.?
-	if node.id == 0 {
-		panic("pool_put: id cannot be 0")
+	if node.tag == nil {
+		panic("pool_put: tag cannot be nil")
 	}
 
-	_pool_put_impl(ptr, node, node.id, m)
+	_pool_put_impl(ptr, node, node.tag, m)
 }
 
 // pool_put_all returns a chain of items to the pool.
@@ -198,7 +203,7 @@ pool_put_all :: proc(p: Pool, m: ^MayItem) {
 	first, _ := m^.?
 
 	ptr := _unwrap_pool(p)
-	if ptr.id != POOL_ID {
+	if !pool_is_it_you(ptr.tag) {
 		panic("non-pool handle used for pool_put_all")
 	}
 
@@ -208,36 +213,36 @@ pool_put_all :: proc(p: Pool, m: ^MayItem) {
 
 // _pool_check_ready validates inside-lock preconditions common to all get/wait operations.
 // Must be called with ptr.mutex held.
-// Returns .Closed if the pool is closed; panics on uninitialized pool or foreign id.
+// Returns .Closed if the pool is closed; panics on uninitialized pool or foreign tag.
 @(private)
-_pool_check_ready :: proc(ptr: ^_Pool, id: int) -> Pool_Get_Result {
+_pool_check_ready :: proc(ptr: ^_Pool, tag: rawptr) -> Pool_Get_Result {
 	if ptr.closed {
 		return .Closed
 	}
 	if ptr.hooks == nil {
 		panic("pool: not initialized")
 	}
-	if !slice.contains(ptr.hooks.ids[:], id) {
-		panic("pool: foreign id")
+	if !slice.contains(ptr.hooks.tags[:], tag) {
+		panic("pool: foreign tag")
 	}
 	return .Ok
 }
 
 @(private)
-_pool_get_available_or_new :: proc(ptr: ^_Pool, id: int, m: ^MayItem) -> Pool_Get_Result {
+_pool_get_available_or_new :: proc(ptr: ^_Pool, tag: rawptr, m: ^MayItem) -> Pool_Get_Result {
 	sync.mutex_lock(&ptr.mutex)
 	defer sync.mutex_unlock(&ptr.mutex)
 
-	if res := _pool_check_ready(ptr, id); res != .Ok {
+	if res := _pool_check_ready(ptr, tag); res != .Ok {
 		return res
 	}
 
 	// Use stored item if available.
-	if _, ok := ptr.lists[id]; ok && ptr.counts[id] > 0 {
-		l := ptr.lists[id]
+	if _, ok := ptr.lists[tag]; ok && ptr.counts[tag] > 0 {
+		l := ptr.lists[tag]
 		raw := list.pop_front(&l)
-		ptr.lists[id] = l
-		ptr.counts[id] -= 1
+		ptr.lists[tag] = l
+		ptr.counts[tag] -= 1
 		poly := cast(^PolyNode)raw
 		polynode_reset(poly)
 		m^ = poly
@@ -246,52 +251,52 @@ _pool_get_available_or_new :: proc(ptr: ^_Pool, id: int, m: ^MayItem) -> Pool_Ge
 	// Call on_get outside lock to reinit or create.
 	h := ptr.hooks
 	ctx := h.ctx
-	count := ptr.counts[id]
+	count := ptr.counts[tag]
 	sync.mutex_unlock(&ptr.mutex)
 	// 2DO [itc: hook-reentrancy-guard]: add @(thread_local) _pool_in_hook: bool guard
 	// to detect pool_get/pool_put called re-entrantly from inside a hook.
-	h.on_get(ctx, id, count, m)
+	h.on_get(ctx, tag, count, m)
 	sync.mutex_lock(&ptr.mutex)
 
 	return m^ != nil ? .Ok : .Not_Created
 }
 
 @(private)
-_pool_get_new_only :: proc(ptr: ^_Pool, id: int, m: ^MayItem) -> Pool_Get_Result {
+_pool_get_new_only :: proc(ptr: ^_Pool, tag: rawptr, m: ^MayItem) -> Pool_Get_Result {
 	sync.mutex_lock(&ptr.mutex)
 	defer sync.mutex_unlock(&ptr.mutex)
 
-	if res := _pool_check_ready(ptr, id); res != .Ok {
+	if res := _pool_check_ready(ptr, tag); res != .Ok {
 		return res
 	}
 
 	// Always call on_get with m^ == nil to force creation.
 	h := ptr.hooks
 	ctx := h.ctx
-	count := ptr.counts[id]
+	count := ptr.counts[tag]
 	sync.mutex_unlock(&ptr.mutex)
 	// 2DO [itc: hook-reentrancy-guard]: add @(thread_local) _pool_in_hook: bool guard
 	// to detect pool_get/pool_put called re-entrantly from inside a hook.
-	h.on_get(ctx, id, count, m)
+	h.on_get(ctx, tag, count, m)
 	sync.mutex_lock(&ptr.mutex)
 
 	return m^ != nil ? .Ok : .Not_Created
 }
 
 @(private)
-_pool_get_available_only :: proc(ptr: ^_Pool, id: int, m: ^MayItem) -> Pool_Get_Result {
+_pool_get_available_only :: proc(ptr: ^_Pool, tag: rawptr, m: ^MayItem) -> Pool_Get_Result {
 	sync.mutex_lock(&ptr.mutex)
 	defer sync.mutex_unlock(&ptr.mutex)
 
-	if res := _pool_check_ready(ptr, id); res != .Ok {
+	if res := _pool_check_ready(ptr, tag); res != .Ok {
 		return res
 	}
 
-	if _, ok := ptr.lists[id]; ok && ptr.counts[id] > 0 {
-		l := ptr.lists[id]
+	if _, ok := ptr.lists[tag]; ok && ptr.counts[tag] > 0 {
+		l := ptr.lists[tag]
 		raw := list.pop_front(&l)
-		ptr.lists[id] = l
-		ptr.counts[id] -= 1
+		ptr.lists[tag] = l
+		ptr.counts[tag] -= 1
 		poly := cast(^PolyNode)raw
 		polynode_reset(poly)
 		m^ = poly
@@ -302,7 +307,7 @@ _pool_get_available_only :: proc(ptr: ^_Pool, id: int, m: ^MayItem) -> Pool_Get_
 }
 
 @(private)
-_pool_get_wait_impl :: proc(ptr: ^_Pool, id: int, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result {
+_pool_get_wait_impl :: proc(ptr: ^_Pool, tag: rawptr, m: ^MayItem, timeout: time.Duration) -> Pool_Get_Result {
 	infinite := timeout < 0
 	start := time.now()
 
@@ -310,15 +315,15 @@ _pool_get_wait_impl :: proc(ptr: ^_Pool, id: int, m: ^MayItem, timeout: time.Dur
 	defer sync.mutex_unlock(&ptr.mutex)
 
 	for {
-		if res := _pool_check_ready(ptr, id); res != .Ok {
+		if res := _pool_check_ready(ptr, tag); res != .Ok {
 			return res
 		}
 
-		if _, ok := ptr.lists[id]; ok && ptr.counts[id] > 0 {
-			l := ptr.lists[id]
+		if _, ok := ptr.lists[tag]; ok && ptr.counts[tag] > 0 {
+			l := ptr.lists[tag]
 			raw := list.pop_front(&l)
-			ptr.lists[id] = l
-			ptr.counts[id] -= 1
+			ptr.lists[tag] = l
+			ptr.counts[tag] -= 1
 			poly := cast(^PolyNode)raw
 			polynode_reset(poly)
 			m^ = poly
@@ -343,7 +348,7 @@ _pool_get_wait_impl :: proc(ptr: ^_Pool, id: int, m: ^MayItem, timeout: time.Dur
 }
 
 @(private)
-_pool_put_impl :: proc(ptr: ^_Pool, node: ^PolyNode, id: int, m: ^MayItem) {
+_pool_put_impl :: proc(ptr: ^_Pool, node: ^PolyNode, tag: rawptr, m: ^MayItem) {
 	sync.mutex_lock(&ptr.mutex)
 
 	if ptr.closed {
@@ -356,12 +361,12 @@ _pool_put_impl :: proc(ptr: ^_Pool, node: ^PolyNode, id: int, m: ^MayItem) {
 		panic("pool_put: pool not initialized")
 	}
 
-	if !slice.contains(ptr.hooks.ids[:], id) {
+	if !slice.contains(ptr.hooks.tags[:], tag) {
 		sync.mutex_unlock(&ptr.mutex)
-		panic("pool_put: foreign id")
+		panic("pool_put: foreign tag")
 	}
 
-	count := ptr.counts[id]
+	count := ptr.counts[tag]
 	h := ptr.hooks
 	ctx := h.ctx
 
@@ -374,7 +379,7 @@ _pool_put_impl :: proc(ptr: ^_Pool, node: ^PolyNode, id: int, m: ^MayItem) {
 
 	// If hook didn't dispose it, store it.
 	if !ptr.closed && m^ != nil {
-		l := ptr.lists[id]
+		l := ptr.lists[tag]
 		// Putting a linked node corrupts the list silently.
 		// A loud panic here is cheaper than hunting corruption later.
 		if polynode_is_linked(node) {
@@ -382,8 +387,8 @@ _pool_put_impl :: proc(ptr: ^_Pool, node: ^PolyNode, id: int, m: ^MayItem) {
 			panic("pool_put: node is still linked — detach before putting back")
 		}
 		list.push_front(&l, &node.node)
-		ptr.lists[id] = l
-		ptr.counts[id] += 1
+		ptr.lists[tag] = l
+		ptr.counts[tag] += 1
 		m^ = nil
 		sync.cond_signal(&ptr.cond)
 	}
@@ -399,11 +404,11 @@ _pool_put_all_validate :: proc(ptr: ^_Pool, first: ^PolyNode) {
 		return
 	}
 	for n := first; n != nil; n = cast(^PolyNode)n.next {
-		if n.id == 0 {
-			panic("pool_put_all: id cannot be 0")
+		if n.tag == nil {
+			panic("pool_put_all: tag cannot be nil")
 		}
-		if !slice.contains(ptr.hooks.ids[:], n.id) {
-			panic("pool_put_all: foreign id")
+		if !slice.contains(ptr.hooks.tags[:], n.tag) {
+			panic("pool_put_all: foreign tag")
 		}
 	}
 }

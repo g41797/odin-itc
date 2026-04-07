@@ -58,9 +58,13 @@ Two types.\
 One rule.
 
 ```odin
+PolyTag :: struct {
+    _: u8,
+}
+
 PolyNode :: struct {
     using node: list.Node,
-    id:         int,
+    tag:        rawptr,
 }
 
 MayItem :: Maybe(^PolyNode)

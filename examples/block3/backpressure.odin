@@ -23,8 +23,8 @@ example_backpressure :: proc() -> bool {
 		on_get = master_on_get,
 		on_put = limited_on_put,
 	}
-	append(&hooks.ids, int(ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, EVENT_TAG)
+	defer delete(hooks.tags)
 
 	p := matryoshka.pool_new(alloc)
 	matryoshka.pool_init(p, &hooks)
@@ -33,7 +33,7 @@ example_backpressure :: proc() -> bool {
 	// .New_Only always creates a new item — pool accumulates until on_put starts dropping.
 	for _ in 0..<10 {
 		mi: MayItem
-		if matryoshka.pool_get(p, int(ItemId.Event), .New_Only, &mi) == .Ok {
+		if matryoshka.pool_get(p, EVENT_TAG, .New_Only, &mi) == .Ok {
 			matryoshka.pool_put(p, &mi)
 		}
 	}

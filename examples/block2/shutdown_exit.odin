@@ -4,7 +4,9 @@ import "core:fmt"
 import "core:thread"
 import matryoshka "../.."
 
-EXIT_ID :: 999
+@(private)
+exit_tag: matryoshka.PolyTag = {}
+EXIT_TAG: rawptr = &exit_tag
 
 // Worker waits for items.
 worker_exit_proc :: proc(t: ^thread.Thread) {
@@ -20,13 +22,15 @@ worker_exit_proc :: proc(t: ^thread.Thread) {
 		}
 
 		ptr, _ := mi.?
-		if ptr.id == EXIT_ID {
+		if ptr.tag == EXIT_TAG {
 			fmt.println("Worker: received EXIT message, shutting down")
-			dtor(&m.builder, &mi)
+			// Exit node is a raw PolyNode — free with the builder allocator.
+			free(ptr, m.builder.alloc)
+			mi = nil
 			return
 		}
 
-		fmt.printfln("Worker: processed data id %d", ptr.id)
+		fmt.println("Worker: processed item")
 		dtor(&m.builder, &mi)
 	}
 }
@@ -49,7 +53,7 @@ example_shutdown_exit :: proc() -> bool {
 	defer thread.destroy(t)
 
 	// Send normal data.
-	mi_d := ctor(&m.builder, int(ItemId.Event))
+	mi_d := ctor(&m.builder, EVENT_TAG)
 	if mi_d != nil {
 		if matryoshka.mbox_send(m.inbox, &mi_d) != .Ok {
 			dtor(&m.builder, &mi_d)
@@ -57,18 +61,13 @@ example_shutdown_exit :: proc() -> bool {
 	}
 
 	// Send exit message.
-	// We need a special item for exit, or just any item with a special id.
-	// Our builder doesn't know EXIT_ID, so we'll do it manually.
-	
+	// Our builder doesn't know EXIT_TAG, so we create the node manually.
 	exit_node := new(PolyNode, alloc)
 	if exit_node != nil {
-		exit_node.id = EXIT_ID
+		exit_node.tag = EXIT_TAG
 		mi_exit: MayItem = exit_node
 		if matryoshka.mbox_send(m.inbox, &mi_exit) != .Ok {
-			// Dispose if send failed.
-			// matryoshka_dispose needs it to be "closed" if it's infrastructure,
-			// but this is just a dummy PolyNode.
-			// Actually, just free it.
+			// Send failed — free manually since this is a raw PolyNode.
 			free(exit_node, alloc)
 		}
 	}

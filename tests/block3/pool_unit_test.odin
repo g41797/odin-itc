@@ -38,11 +38,11 @@ test_pool_init :: proc(t: ^testing.T) {
 	}
 
 	hooks := PoolHooks {
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {},
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 }
@@ -59,27 +59,27 @@ test_pool_get_new :: proc(t: ^testing.T) {
 	b := ex1.make_builder(context.allocator)
 	hooks := PoolHooks {
 		ctx = &b,
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 			b := (^ex1.Builder)(ctx)
-			m^ = ex1.ctor(b, id)
+			m^ = ex1.ctor(b, tag)
 		},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {
 			b := (^ex1.Builder)(ctx)
 			ex1.dtor(b, m)
 		},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 
 	mi: MayItem
-	res := matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Or_New, &mi)
+	res := matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Or_New, &mi)
 	testing.expect(t, res == .Ok, "pool_get should return .Ok")
 	testing.expect(t, mi != nil, "mi should not be nil")
 
 	ptr, _ := mi.?
-	testing.expect(t, ptr.id == int(ex1.ItemId.Event), "id should match")
+	testing.expect(t, ex1.event_is_it_you(ptr.tag), "tag should match EVENT_TAG")
 
 	matryoshka.pool_put(p, &mi)
 	testing.expect(t, mi == nil, "mi should be nil after pool_put")
@@ -103,7 +103,7 @@ test_pool_put_get_reuse :: proc(t: ^testing.T) {
 
 	hooks := PoolHooks {
 		ctx = &b,
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 			if m^ != nil {
 				// Reinit logic.
 				ptr, _ := m^.?
@@ -112,24 +112,24 @@ test_pool_put_get_reuse :: proc(t: ^testing.T) {
 				return
 			}
 			b := (^ex1.Builder)(ctx)
-			m^ = ex1.ctor(b, id)
+			m^ = ex1.ctor(b, tag)
 		},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {
 			// Keep everything.
 		},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 
 	mi: MayItem
-	matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Or_New, &mi)
+	matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Or_New, &mi)
 
 	ptr1, _ := mi.?
 	matryoshka.pool_put(p, &mi)
 
-	matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Or_New, &mi)
+	matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Or_New, &mi)
 	ptr2, _ := mi.?
 
 	testing.expect(t, ptr1 == ptr2, "should reuse the same pointer")
@@ -158,9 +158,9 @@ test_pool_on_put_policy :: proc(t: ^testing.T) {
 
 	hooks := PoolHooks {
 		ctx = &b,
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 			b := (^ex1.Builder)(ctx)
-			m^ = ex1.ctor(b, id)
+			m^ = ex1.ctor(b, tag)
 		},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {
 			if in_pool_count >= 1 {
@@ -170,14 +170,14 @@ test_pool_on_put_policy :: proc(t: ^testing.T) {
 			}
 		},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 
 	mi1, mi2: MayItem
-	matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Or_New, &mi1)
-	matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Or_New, &mi2)
+	matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Or_New, &mi1)
+	matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Or_New, &mi2)
 
 	matryoshka.pool_put(p, &mi1) // Stored (count becomes 1).
 	matryoshka.pool_put(p, &mi2) // Disposed by on_put (in_pool_count was 1).
@@ -185,10 +185,10 @@ test_pool_on_put_policy :: proc(t: ^testing.T) {
 	testing.expect(t, mi2 == nil, "mi2 should be nil because on_put disposed it")
 
 	// Try to get again. Should only get one from pool.
-	res := matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Only, &mi1)
+	res := matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Only, &mi1)
 	testing.expect(t, res == .Ok, "should get the stored item")
 
-	res = matryoshka.pool_get(p, int(ex1.ItemId.Event), .Available_Only, &mi2)
+	res = matryoshka.pool_get(p, ex1.EVENT_TAG, .Available_Only, &mi2)
 	testing.expect(t, res == .Not_Available, "pool should be empty now")
 
 	matryoshka.pool_put(p, &mi1)
@@ -212,14 +212,14 @@ test_pool_get_wait :: proc(t: ^testing.T) {
 
 	hooks := PoolHooks {
 		ctx = &b,
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 			b := (^ex1.Builder)(ctx)
-			m^ = ex1.ctor(b, id)
+			m^ = ex1.ctor(b, tag)
 		},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 
@@ -230,7 +230,7 @@ test_pool_get_wait :: proc(t: ^testing.T) {
 				b: ^ex1.Builder,
 			})(t.data)
 		time.sleep(50 * time.Millisecond)
-		mi := ex1.ctor(args.b, int(ex1.ItemId.Event))
+		mi := ex1.ctor(args.b, ex1.EVENT_TAG)
 		matryoshka.pool_put(args.p, &mi)
 	}
 
@@ -244,7 +244,7 @@ test_pool_get_wait :: proc(t: ^testing.T) {
 	defer thread.destroy(th)
 
 	mi: MayItem
-	res := matryoshka.pool_get_wait(p, int(ex1.ItemId.Event), &mi, 500 * time.Millisecond)
+	res := matryoshka.pool_get_wait(p, ex1.EVENT_TAG, &mi, 500 * time.Millisecond)
 	testing.expect(t, res == .Ok, "pool_get_wait should eventually succeed")
 	testing.expect(t, mi != nil, "should have acquired an item")
 
@@ -258,20 +258,20 @@ test_pool_close_returns_all :: proc(t: ^testing.T) {
 	b := ex1.make_builder(context.allocator)
 	hooks := PoolHooks {
 		ctx = &b,
-		on_get = proc(ctx: rawptr, id: int, in_pool_count: int, m: ^MayItem) {
+		on_get = proc(ctx: rawptr, tag: rawptr, in_pool_count: int, m: ^MayItem) {
 			b := (^ex1.Builder)(ctx)
-			m^ = ex1.ctor(b, id)
+			m^ = ex1.ctor(b, tag)
 		},
 		on_put = proc(ctx: rawptr, in_pool_count: int, m: ^MayItem) {},
 	}
-	append(&hooks.ids, int(ex1.ItemId.Event))
-	defer delete(hooks.ids)
+	append(&hooks.tags, ex1.EVENT_TAG)
+	defer delete(hooks.tags)
 
 	matryoshka.pool_init(p, &hooks)
 
 	// Put 3 items.
 	for _ in 1 ..= 3 {
-		mi := ex1.ctor(&b, int(ex1.ItemId.Event))
+		mi := ex1.ctor(&b, ex1.EVENT_TAG)
 		matryoshka.pool_put(p, &mi)
 	}
 

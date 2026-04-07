@@ -8,7 +8,7 @@
 
 ## Safety: Handle Validation
 
-All mailbox operations (`mbox_send`, `mbox_wait_receive`, `mbox_interrupt`, `mbox_close`, `try_receive_batch`) validate the `Mailbox` handle. If the `PolyNode.id` is not `MAILBOX_ID` (-1), the operation will `panic` immediately. This prevents accidentally using a data item or a pool as a mailbox.
+All mailbox operations (`mbox_send`, `mbox_wait_receive`, `mbox_interrupt`, `mbox_close`, `try_receive_batch`) validate the `Mailbox` handle. If the `PolyNode.tag` is not `MAILBOX_TAG`, the operation will `panic` immediately. This prevents accidentally using a data item or a pool as a mailbox.
 
 ---
 
@@ -307,7 +307,7 @@ flowchart LR
     IN -->|receive| R[Receiver]
 ```
 
-Receiver dispatches on id:
+Receiver dispatches on tag:
 
 ```odin
 for {
@@ -316,10 +316,9 @@ for {
     case .Ok:
         ptr, ok := m^.?
         if !ok { continue }
-        switch ItemId(ptr.id) {
-        case .Event:
+        if event_is_it_you(ptr.tag) {
             // process event
-        case .Sensor:
+        } else if sensor_is_it_you(ptr.tag) {
             // process sensor
         }
         dtor(&b, &m)
@@ -366,26 +365,30 @@ sequenceDiagram
 
 ```odin
 // MainMaster sends Exit
-ExitId :: enum int { Exit = 99 }
+@(private)
+exit_tag: PolyTag = {}
+EXIT_TAG: rawptr = &exit_tag
 
-m := ctor(&b, int(ExitId.Exit))
+exit_node := new(PolyNode, alloc)
+exit_node.tag = EXIT_TAG
+m: MayItem = exit_node
 mbox_send(worker.inbox, &m)
 
 // Worker receives
 for {
-    m: MayItem
-    switch mbox_wait_receive(worker.inbox, &m) {
+    mi: MayItem
+    switch mbox_wait_receive(worker.inbox, &mi) {
     case .Ok:
-        ptr, ok := m^.?
+        ptr, ok := mi^.?
         if !ok { continue }
-        if ptr.id == int(ExitId.Exit) {
-            dtor(&b, &m)
+        if ptr.tag == EXIT_TAG {
+            free(ptr, alloc)
+            mi = nil
             return  // Master returns from its loop — done
         }
         // handle other messages
-        dtor(&b, &m)
+        dtor(&b, &mi)
     case .Closed:
-
         return
     }
 }

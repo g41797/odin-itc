@@ -66,35 +66,36 @@ Matryoshka casts back to internal structs.
 
 ---
 
-## ID split — data vs infrastructure
+## Tag split — data vs infrastructure
 
-One field.  
+One field.
 Clear rule.
 
-| id    | meaning     |
-| ----- | ----------- |
-| `0`   | invalid     |
-| `> 0` | user item   |
-| `< 0` | system item |
+| tag | meaning |
+| --- | ------- |
+| `nil` | invalid |
+| `MAILBOX_TAG` | mailbox infrastructure |
+| `POOL_TAG` | pool infrastructure |
+| any other non-nil | user item |
 
 Example:
 
 ```odin
-SystemId :: enum int {
-    Mailbox = -1,
-    Pool    = -2,
-}
+@(private) mailbox_tag: PolyTag = {}
+@(private) pool_tag:    PolyTag = {}
+MAILBOX_TAG: rawptr = &mailbox_tag
+POOL_TAG:    rawptr = &pool_tag
 ```
 
 No shared ranges.
-
 No guessing.
+Each tag is a unique address.
 
 ---
 
 ## Safety: Handle Validation
 
-All Mailbox and Pool operations validate the handle's ID. If the ID is not the expected system ID (`-1` for Mailbox, `-2` for Pool), the operation will `panic` immediately. This ensures that infrastructure APIs are never called with data items or the wrong type of infrastructure handle.
+All Mailbox and Pool operations validate the handle's tag. If the tag is not `MAILBOX_TAG` or `POOL_TAG` respectively, the operation will `panic` immediately. This ensures that infrastructure APIs are never called with data items or the wrong type of infrastructure handle.
 
 ---
 
@@ -127,8 +128,8 @@ How it works:
 
 * If `m == nil` → return
 * If `m^ == nil` → return
-* Read the `id`
-* Switch based on the id
+* Read the `tag`
+* Switch based on the tag
 * Cast to the internal struct
 * Check the state
 
@@ -277,9 +278,9 @@ Use only for special control flows.
 
 ## Pool and infrastructure
 
-You cannot do this.  
-Do not try to use Pool's get/put for Mailboxes or Pools.  
-If the pool is open, it will treat them as a "foreign" id and panic.
+You cannot do this.
+Do not try to use Pool's get/put for Mailboxes or Pools.
+If the pool is open, it will treat them as a "foreign" tag and panic.
 
 ---
 

@@ -83,7 +83,7 @@ example_fan_in_out :: proc() -> bool {
 	// Producer side: Send items to shared mailbox.
 	// We use the first master's builder to avoid leaks on unconsumed items.
 	for _ in 0 ..< NUM_ITEMS {
-		mi := ctor(&masters[0].builder, int(ItemId.Event))
+		mi := ctor(&masters[0].builder, EVENT_TAG)
 		if mi != nil {
 			if matryoshka.mbox_send(shared_mb, &mi) != .Ok {
 				dtor(&masters[0].builder, &mi)
